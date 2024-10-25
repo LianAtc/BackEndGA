@@ -92,7 +92,6 @@ vector<vector<int>> generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<
         j++;
     }
     
-    
     return poblacion;
 }
 
@@ -168,14 +167,14 @@ int main(int argc, char** argv) {
     cout << "Ejecución del algoritmo GA finalizada." << endl;
     
     cout << "Lista de Piezas:\n";
-    //for (const Pieza& pieza : listaPiezas) {
-        //pieza.imprimirPieza();
-    //}
+    for (const Pieza& pieza : listaPiezas) {
+        pieza.imprimirPieza();
+    }
     cout << "\nLista de Stock:\n";
-    //listaStocks[0].imprimirStock();
+    listaStocks[0].imprimirStock();
     
    cout << endl;
-   //imprimirMatriz(matriz);
+   imprimirMatriz(matriz);
     
     return 0;
 }
