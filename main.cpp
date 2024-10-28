@@ -44,9 +44,10 @@ vector<vector<int>> generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<
     
     for (const Pieza& pieza2 : listaPiezas) {
         if (listaPiezas.empty()) break;
-        entra=0;
-        while(entra==0 && intentos < (numPiezas-1)){
-            indiceAleatorio = rand() % (numPiezas-1); // Random por numero de piezas
+        entra=0,i=0,intentos=0;
+        while(intentos <= numPiezas){
+            // Random por numero de piezas
+            indiceAleatorio = rand() % (numPiezas-1);
             // Obtenemos el indice del id que queremos
             auto it = find_if(listaPiezas.begin(), listaPiezas.end(), 
                           [indiceAleatorio](const Pieza& pieza) {
@@ -59,48 +60,50 @@ vector<vector<int>> generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<
                 cout << "Ancho x Alto:" << anchoMayor << " , " << altoMayor<<endl;
             }           
             
+            // Si entra la pieza la insertamos
             if (find(indicePiezaEscogida.begin(), indicePiezaEscogida.end(), indiceAleatorio) == indicePiezaEscogida.end()) {
-                if (listaPiezas[indice].getW() <= listaStocks[0].getW() && listaPiezas[indice].getH() <= listaStocks[0].getH()) {
-                    entra=1;
+                if (listaPiezas[indice].getW() + anchoMayor <= listaStocks[0].getW() && listaPiezas[indice].getH() <= listaStocks[0].getH()) {
                     indicePiezaEscogida.push_back(indiceAleatorio);
-                }else{
-                    entra=0;
+                    // Defino la longitud más grande a cortar en guillotina         
+                    if(altoMayor>listaPiezas[indice].getH()){
+                         anchoMayor += listaPiezas[indice].getW();
+                    }else{
+                        anchoMayor += listaPiezas[indice].getW();
+                        altoMayor = listaPiezas[indice].getH();
+                    }
+
+                    // Elimino pieza inicial
+                    auto it2 = std::find_if(listaPiezas.begin(), listaPiezas.end(), [indiceAleatorio](const Pieza& pieza) {
+                        return pieza.getID() == indiceAleatorio;
+                    });
+                    if (it2 != listaPiezas.end()) {
+                        listaPiezas.erase(it2);
+                    }
+                    matriz[i][j]=indiceAleatorio;
+                    i++;
                 }
-            }
-            intentos++;              
-                          
-            // Defino la longitud más grande a cortar en guillotina         
-            if(altoMayor>listaPiezas[indice].getH()){
-                 anchoMayor += listaPiezas[indice].getW();
-            }else{
-                anchoMayor += listaPiezas[indice].getW();
-                altoMayor = listaPiezas[indice].getH();
-            }
-            
-            // Elimino pieza inicial
-            auto it2 = std::find_if(listaPiezas.begin(), listaPiezas.end(), [indiceAleatorio](const Pieza& pieza) {
-                return pieza.getID() == indiceAleatorio;
-            });
-            if (it2 != listaPiezas.end()) {
-                listaPiezas.erase(it2);
-            }
-            matriz[i][j]=indiceAleatorio;
-            i++;
-                          
+            }          
+            intentos++;
+            cout<<"Adentro"<<endl;
         }
+        cout<<"Sali"<<endl;
         listaStocks[0].setH(listaStocks[0].getH()-altoMayor);
+        altoMayor=0;
+        anchoMayor=0;
         j++;
     }
     
     return poblacion;
 }
 
-void imprimirMatriz(const vector<vector<int>>& matriz) {
-    for (size_t i = 0; i < matriz.size(); ++i) {
-        for (size_t j = 0; j < matriz[i].size(); ++j) {
-            cout << matriz[i][j] << " ";  // Imprime cada elemento con espacio
+void imprimirMatriz(vector<vector<int>>& matriz) {
+    for (int j = 0; j < (numPiezas-1); ++j) {
+        for (int i = 0; i < (numPiezas-1); ++i) {
+            if(matriz[i][j] == -1) break;
+            cout << matriz[i][j] << " "; // Debe imprimir mejor matriz, no matriz
+            matriz[i][j] = -1;
         }
-        cout << endl;  // Salto de línea al final de cada fila
+        cout << endl;  // Salto de línea después de cada fila
     }
 }
 
@@ -162,7 +165,6 @@ int main(int argc, char** argv) {
     sort(listaStocks.begin(), listaStocks.end(), compararStocks);
     sort(listaPiezas.begin(), listaPiezas.end(), compararPiezas);
 
-    //AlgoritmoACO(nHormigas, maxIter, alpha, beta, rho, tol, listaPiezas, listaStocks, grafo);
     poblacion = generarPoblacionInicial(listaPiezas,listaStocks, tamanoPoblacion);
     cout << "Ejecución del algoritmo GA finalizada." << endl;
     
