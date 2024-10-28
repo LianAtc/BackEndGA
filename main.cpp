@@ -24,14 +24,42 @@
 
 using namespace std;
 
-int numPiezas = 10;
+int numPiezas = 20;
 vector<vector<int>> matriz(numPiezas, vector<int>(numPiezas, -1));
 vector<vector<int>> solucion(numPiezas, vector<int>(numPiezas, -1));
 int anchoMayor,altoMayor;
 double desTotal;
 
-vector<vector<int>> generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<Stock>& listaStocks2, int tamanoPoblacion) {
-    vector<vector<int>> poblacion;
+void resetearMatriz(vector<vector<int>>& matriz) {
+    for (auto& fila : matriz) {
+        for (auto& elemento : fila) {
+            elemento = -1;
+        }
+    }
+}
+
+vector<int> convertirMatrizACromosoma(const vector<vector<int>>& matriz) {
+    vector<int> lista;
+    int filas = matriz.size();
+    int columnas = matriz[0].size();
+
+    for (int j = 0; j < columnas; ++j) {       // Recorre las columnas primero
+        for (int i = 0; i < filas; ++i) {      // Luego las filas de cada columna
+            if (matriz[i][j] != -1) {          // Ignora valores -1
+                lista.push_back(matriz[i][j]);
+            }
+        }
+        lista.push_back('L'); // Agrega un separador para cambio de columna
+    }
+    while (!lista.empty() && lista.back() == 'L') {
+        lista.pop_back();
+    }
+
+    return lista;
+}
+
+vector<int> generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<Stock>& listaStocks2, int tamanoPoblacion) {
+    vector<int> poblacion;
     
     Stock solucion;
     int numPiezaLista=0,indiceAleatorio=0,entra=0,menorH=100,a,b;
@@ -45,7 +73,7 @@ vector<vector<int>> generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<
     for (const Pieza& pieza2 : listaPiezas) {
         if (listaPiezas.empty()) break;
         entra=0,i=0,intentos=0;
-        while(intentos <= numPiezas){
+        while(intentos <= (numPiezas)){
             // Random por numero de piezas
             indiceAleatorio = rand() % (numPiezas-1);
             // Obtenemos el indice del id que queremos
@@ -56,8 +84,8 @@ vector<vector<int>> generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<
                           
             if (it != listaPiezas.end()) {
                 indice = distance(listaPiezas.begin(), it);
-                listaPiezas[indice].imprimirPieza();
-                cout << "Ancho x Alto:" << anchoMayor << " , " << altoMayor<<endl;
+                //listaPiezas[indice].imprimirPieza();
+                //cout << "Ancho x Alto:" << anchoMayor << " , " << altoMayor<<endl;
             }           
             
             // Si entra la pieza la insertamos
@@ -84,15 +112,13 @@ vector<vector<int>> generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<
                 }
             }          
             intentos++;
-            cout<<"Adentro"<<endl;
         }
-        cout<<"Sali"<<endl;
         listaStocks[0].setH(listaStocks[0].getH()-altoMayor);
         altoMayor=0;
         anchoMayor=0;
         j++;
     }
-    
+    poblacion = convertirMatrizACromosoma(matriz);
     return poblacion;
 }
 
@@ -101,7 +127,7 @@ void imprimirMatriz(vector<vector<int>>& matriz) {
         for (int i = 0; i < (numPiezas-1); ++i) {
             if(matriz[i][j] == -1) break;
             cout << matriz[i][j] << " "; // Debe imprimir mejor matriz, no matriz
-            matriz[i][j] = -1;
+            //matriz[i][j] = -1;
         }
         cout << endl;  // Salto de línea después de cada fila
     }
@@ -152,20 +178,33 @@ void ordenarStocks(vector<Stock>& stocks) {
 
 int main(int argc, char** argv) {
     srand(static_cast<unsigned>(time(0)));
-    int numPiezas = 40; 
+    int numPiezas = 40, i=0; 
     int tamanoPoblacion = 10; 
     int generaciones = 50;
     double tasaMutacion = 0.1;
     
-    vector<vector<int>> poblacion;
+    vector<int> resultado;
     vector<Pieza> listaPiezas = generarListaPiezas(numPiezas);
     vector<Stock> listaStocks = generarListaStocks(1);
-    
+    vector<vector<int>> poblacion;
 
     sort(listaStocks.begin(), listaStocks.end(), compararStocks);
     sort(listaPiezas.begin(), listaPiezas.end(), compararPiezas);
 
-    poblacion = generarPoblacionInicial(listaPiezas,listaStocks, tamanoPoblacion);
+    for(i=0;i<=30;i++){
+        resultado = generarPoblacionInicial(listaPiezas,listaStocks, tamanoPoblacion);
+        poblaciones.push_back(resultado);
+        for (int elemento : resultado) {
+            if (elemento == 'L') {
+                cout << 'L' << " ";
+            } else {
+                cout << elemento << " ";
+            }
+        }
+        cout<<endl;
+        resetearMatriz(matriz);
+    }
+    
     cout << "Ejecución del algoritmo GA finalizada." << endl;
     
     cout << "Lista de Piezas:\n";
@@ -176,8 +215,7 @@ int main(int argc, char** argv) {
     listaStocks[0].imprimirStock();
     
    cout << endl;
-   imprimirMatriz(matriz);
-    
+   
     return 0;
 }
 
