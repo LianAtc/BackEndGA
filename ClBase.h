@@ -38,6 +38,7 @@ public:
     }
     int calcularArea() const {return w * h;}
   
+    int getArea() const { return (w*h); }
     int getAncho() const { return w; }
     int getAlto() const { return h; }
     

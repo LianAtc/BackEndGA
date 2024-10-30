@@ -24,7 +24,7 @@
 
 using namespace std;
 
-int numPiezas = 20;
+int numPiezas = 30;
 vector<vector<int>> matriz(numPiezas, vector<int>(numPiezas, -1));
 vector<vector<int>> solucion(numPiezas, vector<int>(numPiezas, -1));
 int anchoMayor,altoMayor;
@@ -49,11 +49,11 @@ vector<int> convertirMatrizACromosoma(const vector<vector<int>>& matriz) {
                 lista.push_back(matriz[i][j]);
             }
         }
-        lista.push_back('L'); // Agrega un separador para cambio de columna
+        //lista.push_back('L'); // Agrega un separador para cambio de columna
     }
-    while (!lista.empty() && lista.back() == 'L') {
-        lista.pop_back();
-    }
+    //while (!lista.empty() && lista.back() == 'L') {
+    //    lista.pop_back();
+    //}
 
     return lista;
 }
@@ -133,7 +133,6 @@ void imprimirMatriz(vector<vector<int>>& matriz) {
     }
 }
 
-
 vector<Pieza> generarListaPiezas(int cantidad) {
     vector<Pieza> listaPiezas;
     for (int i = 0; i < cantidad; ++i) {
@@ -176,6 +175,104 @@ void ordenarStocks(vector<Stock>& stocks) {
     sort(stocks.begin(), stocks.end(), compararStocks);
 }
 
+// Función de evaluación del fitness: Minimizar el desperdicio.
+double calcularFitness(const vector<int>& cromosoma, const vector<Stock>& stocks) {
+    int desperdicio = 0;
+    for (int piezaID : cromosoma) {
+        desperdicio += stocks[0].getArea() - piezaID;
+    }
+    return 1.0 / (1 + desperdicio);
+}
+
+
+// Cruce por un punto: Intercambiamos segmentos de dos padres.
+pair<vector<int>, vector<int>> cruzar(const vector<int>& padre1, const vector<int>& padre2) {
+    int puntoCruce = rand() % padre1.size();
+    vector<int> hijo1(padre1.begin(), padre1.begin() + puntoCruce);
+    vector<int> hijo2(padre2.begin(), padre2.begin() + puntoCruce);
+
+    hijo1.insert(hijo1.end(), padre2.begin() + puntoCruce, padre2.end());
+    hijo2.insert(hijo2.end(), padre1.begin() + puntoCruce, padre1.end());
+
+    return make_pair(hijo1, hijo2);
+}
+
+// Mutación: Alteramos un gen del cromosoma.
+void mutar(vector<int>& cromosoma, int tasaMutacion) {
+    for (int& gene : cromosoma) {
+        if (rand() / static_cast<double>(RAND_MAX) < tasaMutacion) {
+            gene = rand() % numPiezas;
+        }
+    }
+}
+
+// Selección por torneo: Elegimos el mejor entre varios individuos aleatorios.
+vector<int> seleccionar(const vector<vector<int>>& poblacion, const vector<double>& fitness) {
+    int torneo = 3;
+    int mejor = rand() % poblacion.size();
+    for (int i = 1; i < torneo; ++i) {
+        int otro = rand() % poblacion.size();
+        if (fitness[otro] > fitness[mejor]) {
+            mejor = otro;
+        }
+    }
+    return poblacion[mejor];
+}
+
+void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tamanoPoblacion,
+        int generaciones, double tasaMutacion) {
+        vector<vector<int>> poblacion;
+    for (int i = 0; i < tamanoPoblacion; ++i) {
+        vector<int> cromosoma = generarPoblacionInicial(listaPiezas, listaStocks, tamanoPoblacion);
+        poblacion.push_back(cromosoma);
+    }
+
+    for (int generacion = 0; generacion < generaciones; ++generacion) {
+        vector<double> fitness;
+        for (const auto& cromosoma : poblacion) {
+            fitness.push_back(calcularFitness(cromosoma, listaStocks));
+        }
+
+        vector<vector<int>> nuevaPoblacion;
+
+        // Crear nueva población mediante selección, cruce y mutación.
+        while (nuevaPoblacion.size() < tamanoPoblacion) {
+            vector<int> padre1 = seleccionar(poblacion, fitness);
+            vector<int> padre2 = seleccionar(poblacion, fitness);
+
+            // Corrección: Usamos make_pair en lugar de structured binding.
+            pair<vector<int>, vector<int>> hijos = cruzar(padre1, padre2);
+            vector<int> hijo1 = hijos.first;
+            vector<int> hijo2 = hijos.second;
+
+            mutar(hijo1,tasaMutacion);
+            mutar(hijo2,tasaMutacion);
+
+            nuevaPoblacion.push_back(hijo1);
+            nuevaPoblacion.push_back(hijo2);
+        }
+
+        poblacion = nuevaPoblacion;
+    }
+
+    // Encontrar la mejor solución al final.
+    vector<int> mejorSolucion = poblacion[0];
+    double mejorFitness = calcularFitness(mejorSolucion, listaStocks);
+    for (const auto& cromosoma : poblacion) {
+        double fit = calcularFitness(cromosoma, listaStocks);
+        if (fit > mejorFitness) {
+            mejorFitness = fit;
+            mejorSolucion = cromosoma;
+        }
+    }
+
+    cout << "Mejor solución encontrada con fitness: " << mejorFitness << endl;
+    for (int gene : mejorSolucion) {
+        cout << gene << " ";
+    }
+    cout << endl; 
+}
+
 int main(int argc, char** argv) {
     srand(static_cast<unsigned>(time(0)));
     int numPiezas = 40, i=0; 
@@ -186,36 +283,22 @@ int main(int argc, char** argv) {
     vector<int> resultado;
     vector<Pieza> listaPiezas = generarListaPiezas(numPiezas);
     vector<Stock> listaStocks = generarListaStocks(1);
-    vector<vector<int>> poblacion;
 
     sort(listaStocks.begin(), listaStocks.end(), compararStocks);
     sort(listaPiezas.begin(), listaPiezas.end(), compararPiezas);
-
-    for(i=0;i<=30;i++){
-        resultado = generarPoblacionInicial(listaPiezas,listaStocks, tamanoPoblacion);
-        poblaciones.push_back(resultado);
-        for (int elemento : resultado) {
-            if (elemento == 'L') {
-                cout << 'L' << " ";
-            } else {
-                cout << elemento << " ";
-            }
-        }
-        cout<<endl;
-        resetearMatriz(matriz);
-    }
     
+    algoritmoGA(listaPiezas,listaStocks,tamanoPoblacion,generaciones,tasaMutacion);
     cout << "Ejecución del algoritmo GA finalizada." << endl;
     
-    cout << "Lista de Piezas:\n";
-    for (const Pieza& pieza : listaPiezas) {
-        pieza.imprimirPieza();
-    }
-    cout << "\nLista de Stock:\n";
-    listaStocks[0].imprimirStock();
-    
-   cout << endl;
-   
+//    cout << "Lista de Piezas:\n";
+//    for (const Pieza& pieza : listaPiezas) {
+//        pieza.imprimirPieza();
+//    }
+//    cout << "\nLista de Stock:\n";
+//    listaStocks[0].imprimirStock();
+//    
+//   cout << endl;
+//   
     return 0;
 }
 
