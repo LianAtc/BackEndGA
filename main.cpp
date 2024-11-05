@@ -49,11 +49,13 @@ vector<int> convertirMatrizACromosoma(const vector<vector<int>>& matriz) {
                 lista.push_back(matriz[i][j]);
             }
         }
-        //lista.push_back('L'); // Agrega un separador para cambio de columna
     }
-    //while (!lista.empty() && lista.back() == 'L') {
-    //    lista.pop_back();
-    //}
+    
+    int cantidad_actual = lista.size();
+    while (cantidad_actual < numPiezas) {
+        lista.push_back(-1);
+        cantidad_actual++;
+    }
 
     return lista;
 }
@@ -226,6 +228,15 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
         vector<int> cromosoma = generarPoblacionInicial(listaPiezas, listaStocks, tamanoPoblacion);
         poblacion.push_back(cromosoma);
     }
+        
+//    std::cout << "Población inicial:" << std::endl;
+//    for (int i = 0; i < poblacion.size(); ++i) {
+//        std::cout << "Cromosoma " << i + 1 << ": ";
+//        for (int gen : poblacion[i]) {
+//            std::cout << gen << " ";
+//        }
+//        std::cout << std::endl;
+//    }
 
     for (int generacion = 0; generacion < generaciones; ++generacion) {
         vector<double> fitness;
