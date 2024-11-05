@@ -22,6 +22,8 @@
 #include "ClPieza.h"
 #include "ClBase.h"
 
+#include "ClCromosoma.h"
+
 using namespace std;
 
 int numPiezas = 30;
@@ -58,70 +60,6 @@ vector<int> convertirMatrizACromosoma(const vector<vector<int>>& matriz) {
     }
 
     return lista;
-}
-
-vector<int> generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<Stock>& listaStocks2, int tamanoPoblacion) {
-    vector<int> poblacion;
-    
-    Stock solucion;
-    int numPiezaLista=0,indiceAleatorio=0,entra=0,menorH=100,a,b;
-    int piezaEscogida,i=0,j=0,piezaPasada,ancho,alto,intentos=0,indice;
-    double feromonas,heuristica,probabillidad=100,mProb=0;
-    vector<int> indicePiezaEscogida;
-    
-    vector<Pieza> listaPiezas = listaPiezas2;
-    vector<Stock> listaStocks = listaStocks2;
-    
-    for (const Pieza& pieza2 : listaPiezas) {
-        if (listaPiezas.empty()) break;
-        entra=0,i=0,intentos=0;
-        while(intentos <= (numPiezas)){
-            // Random por numero de piezas
-            indiceAleatorio = rand() % (numPiezas-1);
-            // Obtenemos el indice del id que queremos
-            auto it = find_if(listaPiezas.begin(), listaPiezas.end(), 
-                          [indiceAleatorio](const Pieza& pieza) {
-                              return pieza.getID() == indiceAleatorio;
-                          });
-                          
-            if (it != listaPiezas.end()) {
-                indice = distance(listaPiezas.begin(), it);
-                //listaPiezas[indice].imprimirPieza();
-                //cout << "Ancho x Alto:" << anchoMayor << " , " << altoMayor<<endl;
-            }           
-            
-            // Si entra la pieza la insertamos
-            if (find(indicePiezaEscogida.begin(), indicePiezaEscogida.end(), indiceAleatorio) == indicePiezaEscogida.end()) {
-                if (listaPiezas[indice].getW() + anchoMayor <= listaStocks[0].getW() && listaPiezas[indice].getH() <= listaStocks[0].getH()) {
-                    indicePiezaEscogida.push_back(indiceAleatorio);
-                    // Defino la longitud más grande a cortar en guillotina         
-                    if(altoMayor>listaPiezas[indice].getH()){
-                         anchoMayor += listaPiezas[indice].getW();
-                    }else{
-                        anchoMayor += listaPiezas[indice].getW();
-                        altoMayor = listaPiezas[indice].getH();
-                    }
-
-                    // Elimino pieza inicial
-                    auto it2 = std::find_if(listaPiezas.begin(), listaPiezas.end(), [indiceAleatorio](const Pieza& pieza) {
-                        return pieza.getID() == indiceAleatorio;
-                    });
-                    if (it2 != listaPiezas.end()) {
-                        listaPiezas.erase(it2);
-                    }
-                    matriz[i][j]=indiceAleatorio;
-                    i++;
-                }
-            }          
-            intentos++;
-        }
-        listaStocks[0].setH(listaStocks[0].getH()-altoMayor);
-        altoMayor=0;
-        anchoMayor=0;
-        j++;
-    }
-    poblacion = convertirMatrizACromosoma(matriz);
-    return poblacion;
 }
 
 void imprimirMatriz(vector<vector<int>>& matriz) {
@@ -181,7 +119,7 @@ void ordenarStocks(vector<Stock>& stocks) {
 double calcularFitness(const vector<int>& cromosoma, const vector<Stock>& stocks) {
     int desperdicio = 0;
     for (int piezaID : cromosoma) {
-        desperdicio += stocks[0].getArea() - piezaID;
+        desperdicio += piezaID;
     }
     return 1.0 / (1 + desperdicio);
 }
@@ -221,11 +159,107 @@ vector<int> seleccionar(const vector<vector<int>>& poblacion, const vector<doubl
     return poblacion[mejor];
 }
 
+Cromosoma generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<Stock>& listaStocks2, int tamanoPoblacion) {
+    vector<int> cromosomaTemp;
+    Cromosoma cromosoma(numPiezas);
+    
+    Stock solucion;
+    int numPiezaLista=0,indiceAleatorio=0,entra=0,menorH=100,a,b;
+    int piezaEscogida,i=0,j=0,piezaPasada,ancho,alto,intentos=0,indice;
+    double feromonas,heuristica,probabillidad=100,mProb=0;
+    vector<int> indicePiezaEscogida;
+    
+    vector<Pieza> listaPiezas = listaPiezas2;
+    vector<Stock> listaStocks = listaStocks2;
+    
+    for (const Pieza& pieza2 : listaPiezas) {
+        if (listaPiezas.empty()) break;
+        entra=0,i=0,intentos=0;
+        while(intentos <= (numPiezas)){
+            // Random por numero de piezas
+            indiceAleatorio = rand() % (numPiezas-1);
+            // Obtenemos el indice del id que queremos
+            auto it = find_if(listaPiezas.begin(), listaPiezas.end(), 
+                          [indiceAleatorio](const Pieza& pieza) {
+                              return pieza.getID() == indiceAleatorio;
+                          });
+                          
+            if (it != listaPiezas.end()) {
+                indice = distance(listaPiezas.begin(), it);
+                //listaPiezas[indice].imprimirPieza();
+                //cout << "Ancho x Alto:" << anchoMayor << " , " << altoMayor<<endl;
+            }           
+            
+            // Si entra la pieza la insertamos
+            if (find(indicePiezaEscogida.begin(), indicePiezaEscogida.end(), indiceAleatorio) == indicePiezaEscogida.end()) {
+                if (listaPiezas[indice].getW() + anchoMayor <= listaStocks[0].getW() && listaPiezas[indice].getH() <= listaStocks[0].getH()) {
+                    indicePiezaEscogida.push_back(indiceAleatorio);
+                    // Defino la longitud más grande a cortar en guillotina         
+                    if(altoMayor>listaPiezas[indice].getH()){
+                         anchoMayor += listaPiezas[indice].getW();
+                    }else{
+                        anchoMayor += listaPiezas[indice].getW();
+                        altoMayor = listaPiezas[indice].getH();
+                    }
+
+                    // Elimino pieza inicial
+                    auto it2 = std::find_if(listaPiezas.begin(), listaPiezas.end(), [indiceAleatorio](const Pieza& pieza) {
+                        return pieza.getID() == indiceAleatorio;
+                    });
+                    if (it2 != listaPiezas.end()) {
+                        listaPiezas.erase(it2);
+                    }
+                    matriz[i][j]=indiceAleatorio;
+                    i++;
+                }
+            }          
+            intentos++;
+        }
+        listaStocks[0].setH(listaStocks[0].getH()-altoMayor);
+        altoMayor=0;
+        anchoMayor=0;
+        j++;
+    }
+    cromosomaTemp = convertirMatrizACromosoma(matriz);
+    generarCromosoma(cromosoma,cromosomaTemp,listaPiezas2);
+    
+    return cromosoma;
+}
+
+
+void generarCromosoma(Cromosoma& cromosoma, const std::vector<int>& cromosomaTemp, const std::vector<Pieza>& listaPiezas) {
+    // Recorremos la lista de IDs en cromosomaTemp
+    for (int i = 0; i < cromosomaTemp.size(); ++i) {
+        int piezaID = cromosomaTemp[i];
+        
+        // Detenemos el llenado si encontramos un -1
+        if (piezaID == -1) {
+            break;
+        }
+
+        // Buscamos la pieza correspondiente en la lista de piezas por ID
+        auto it = std::find_if(listaPiezas.begin(), listaPiezas.end(), 
+                               [piezaID](const Pieza& pieza) {
+                                   return pieza.getID() == piezaID;
+                               });
+
+        if (it != listaPiezas.end()) {
+            // Si encontramos la pieza, la insertamos en el cromosoma
+            cromosoma.setGene(i, *it);
+        } else {
+            std::cerr << "Error: Pieza con ID " << piezaID << " no encontrada en la lista de piezas." << std::endl;
+        }
+    }
+}
+
+
 void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tamanoPoblacion,
         int generaciones, double tasaMutacion) {
-        vector<vector<int>> poblacion;
+        Poblacion poblacion;
+        
+    // Generamos la población inicial
     for (int i = 0; i < tamanoPoblacion; ++i) {
-        vector<int> cromosoma = generarPoblacionInicial(listaPiezas, listaStocks, tamanoPoblacion);
+        generarPoblacionInicial(listaPiezas, listaStocks, tamanoPoblacion);
         poblacion.push_back(cromosoma);
     }
         
