@@ -36,7 +36,7 @@ public:
         return (index >= 0 && index < genes.size()) ? genes[index] : Pieza();
     }
 
-    std::vector<Pieza>& getGenes() {
+    const vector<Pieza>& getGenes() const {
         return genes;
     }
 
@@ -47,7 +47,7 @@ public:
     double getFitness() const {
         return fitness;
     }
-
+    
     void print() const {
         for (const Pieza& pieza : genes) {
             pieza.imprimirPieza();

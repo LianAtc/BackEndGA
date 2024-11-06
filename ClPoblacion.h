@@ -22,12 +22,19 @@ private:
     std::vector<Cromosoma> cromosomas;
 
 public:
+    Poblacion() = default;
+    
     Poblacion(int tamanoPoblacion, int numGenes) {
         for (int i = 0; i < tamanoPoblacion; ++i) {
             cromosomas.push_back(Cromosoma(numGenes));
         }
     }
 
+    const std::vector<Cromosoma>& getCromosomas() const {
+        return cromosomas;
+    }
+
+    // Si también tienes una versión no const de getCromosomas(), mantenla
     std::vector<Cromosoma>& getCromosomas() {
         return cromosomas;
     }
@@ -36,6 +43,10 @@ public:
         if (index >= 0 && index < cromosomas.size()) {
             cromosomas[index] = cromosoma;
         }
+    }
+    
+    void addCromosoma(const Cromosoma& cromosoma) {
+        cromosomas.push_back(cromosoma);
     }
 
     Cromosoma getBestCromosoma() const {
