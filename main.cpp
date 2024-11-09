@@ -27,7 +27,7 @@
 
 using namespace std;
 
-int numPiezas = 30;
+int numPiezas = 20;
 vector<vector<int>> matriz(numPiezas, vector<int>(numPiezas, -1));
 vector<vector<int>> solucion(numPiezas, vector<int>(numPiezas, -1));
 int anchoMayor,altoMayor;
@@ -59,7 +59,11 @@ vector<int> convertirMatrizACromosoma(const vector<vector<int>>& matriz) {
         lista.push_back(-1);
         cantidad_actual++;
     }
-
+    
+    for (int elemento : lista) {
+        cout << elemento << " ";
+    }
+    
     return lista;
 }
 
@@ -134,7 +138,7 @@ void calcularDesperdicio(Cromosoma& cromosoma, const Stock& stock) {
     }
 
     double areaStock = stock.calcularArea();
-    double desperdicio = areaStock - areaTotalPiezas;
+    double desperdicio = areaTotalPiezas/areaStock;
 
     // Asegurarse de que el desperdicio no sea negativo
     if (desperdicio < 0) {
@@ -142,7 +146,7 @@ void calcularDesperdicio(Cromosoma& cromosoma, const Stock& stock) {
     }
 
     // Invertir el desperdicio para definir el fitness (menor desperdicio = mayor fitness)
-    double fitness = 1.0 / (1.0 + desperdicio); // Ajuste de fitness: más alto con menos desperdicio.
+    double fitness = 100 * (1.0 - desperdicio); // Ajuste de fitness: más alto con menos desperdicio.
     cromosoma.setFitness(fitness); // Configura el fitness del cromosoma.
 
 }
@@ -172,6 +176,14 @@ void generarCromosoma(Cromosoma& cromosoma, const std::vector<int>& cromosomaTem
     }
 }
 
+vector<int> obtenerListaIDs(const std::vector<Pieza>& listaPiezas) {
+    std::vector<int> listaIDs;
+    for (const auto& pieza : listaPiezas) {
+        listaIDs.push_back(pieza.getID());
+    }
+    return listaIDs;
+}
+
 Poblacion generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<Stock>& listaStocks2, int tamanoPoblacion) {
     Poblacion poblacion(tamanoPoblacion, numPiezas);
     
@@ -182,18 +194,25 @@ Poblacion generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<Stock>& li
     vector<int> indicePiezaEscogida;
     
     for (int n = 0; n < tamanoPoblacion; ++n) {
+        
         Cromosoma cromosoma(listaPiezas2.size());
         vector<int> cromosomaTemp(numPiezas, -1);
     
         vector<Pieza> listaPiezas = listaPiezas2;
         vector<Stock> listaStocks = listaStocks2;
+        
+        altoMayor=0, anchoMayor=0, i=0, j=0;
+        indicePiezaEscogida.clear();
 
         for (const Pieza& pieza2 : listaPiezas) {
             if (listaPiezas.empty()) break;
             entra=0,i=0,intentos=0;
             while(intentos <= (numPiezas)){
-                // Random por numero de piezas
-                indiceAleatorio = rand() % (numPiezas-1);
+                // Random por numero de piezas existentes
+                if (listaPiezas.empty()) break;
+                auto listaIDs = obtenerListaIDs(listaPiezas);
+                int idAleatorio = rand() % listaIDs.size();
+                int indiceAleatorio = listaIDs[idAleatorio];
                 // Obtenemos el indice del id que queremos
                 auto it = find_if(listaPiezas.begin(), listaPiezas.end(), 
                               [indiceAleatorio](const Pieza& pieza) {
@@ -202,7 +221,7 @@ Poblacion generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<Stock>& li
 
                 if (it != listaPiezas.end()) {
                     indice = distance(listaPiezas.begin(), it);
-                    //listaPiezas[indice].imprimirPieza();
+                    listaPiezas[indice].imprimirPieza();
                     //cout << "Ancho x Alto:" << anchoMayor << " , " << altoMayor<<endl;
                 }           
 
@@ -238,6 +257,8 @@ Poblacion generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<Stock>& li
         }
         cromosomaTemp = convertirMatrizACromosoma(matriz);
         generarCromosoma(cromosoma,cromosomaTemp,listaPiezas2);
+        //cout<<"Impresión cromosoma"<<endl;
+        //cromosoma.imprimir();
         poblacion.setCromosoma(n, cromosoma);
     }
     
@@ -275,7 +296,7 @@ vector<Cromosoma> seleccionarElitista(const Poblacion& poblacion, int numElites)
     vector<Cromosoma> cromosomas = poblacion.getCromosomas();
     sort(cromosomas.begin(), cromosomas.end(), 
          [](const Cromosoma& a, const Cromosoma& b) {
-             return a.getFitness() > b.getFitness();
+             return a.getFitness() < b.getFitness();
          });
 
     // Tomar los mejores numElites cromosomas
@@ -286,19 +307,110 @@ vector<Cromosoma> seleccionarElitista(const Poblacion& poblacion, int numElites)
     return elites;
 }
 
+pair<Cromosoma, Cromosoma> cruzar(const Cromosoma& padre1, const Cromosoma& padre2) {
+    int tamano = padre1.getGenes().size();
+    Cromosoma hijo1(tamano);
+    Cromosoma hijo2(tamano);
+    set<int> genesUsadosHijo1;
+    set<int> genesUsadosHijo2;
+
+    // Seleccionar un punto de cruce aleatorio
+    int puntoCruce = rand() % tamano;
+
+    // Copiar genes de los padres a los hijos antes del punto de cruce
+    for (int i = 0; i < puntoCruce; ++i) {
+        hijo1.setGene(i, padre1.getGene(i));
+        hijo2.setGene(i, padre2.getGene(i));
+        genesUsadosHijo1.insert(padre1.getGene(i).getID());
+        genesUsadosHijo2.insert(padre2.getGene(i).getID());
+    }
+
+    // Completar los hijos después del punto de cruce sin duplicados
+    for (int i = puntoCruce; i < tamano; ++i) {
+        if (genesUsadosHijo1.find(padre2.getGene(i).getID()) == genesUsadosHijo1.end()) {
+            hijo1.setGene(i, padre2.getGene(i));
+            genesUsadosHijo1.insert(padre2.getGene(i).getID());
+        } else {
+            // Encontrar un gen único de padre1
+            for (const Pieza& gen : padre1.getGenes()) {
+                if (genesUsadosHijo1.find(gen.getID()) == genesUsadosHijo1.end()) {
+                    hijo1.setGene(i, gen);
+                    genesUsadosHijo1.insert(gen.getID());
+                    break;
+                }
+            }
+        }
+
+        if (genesUsadosHijo2.find(padre1.getGene(i).getID()) == genesUsadosHijo2.end()) {
+            hijo2.setGene(i, padre1.getGene(i));
+            genesUsadosHijo2.insert(padre1.getGene(i).getID());
+        } else {
+            // Encontrar un gen único de padre2
+            for (const Pieza& gen : padre2.getGenes()) {
+                if (genesUsadosHijo2.find(gen.getID()) == genesUsadosHijo2.end()) {
+                    hijo2.setGene(i, gen);
+                    genesUsadosHijo2.insert(gen.getID());
+                    break;
+                }
+            }
+        }
+    }
+
+    return make_pair(hijo1, hijo2);
+}
+
+void mutar(Cromosoma& cromosoma, double tasaMutacion) {
+    // Generar un número aleatorio entre 0 y 1 para decidir si se muta
+    double probabilidad = static_cast<double>(rand()) / RAND_MAX;
+
+    // Si la probabilidad es menor que la tasa de mutación, realiza la mutación
+    if (probabilidad < tasaMutacion) {
+        int tamano = cromosoma.getGenes().size();
+
+        // Verificar que el tamaño del cromosoma permita la mutación
+        if (tamano > 1) {
+            // Elegir dos índices aleatorios diferentes para intercambiar
+            int indice1 = rand() % tamano;
+            int indice2 = rand() % tamano;
+
+            // Asegurarse de que los índices sean distintos
+            while (indice2 == indice1) {
+                indice2 = rand() % tamano;
+            }
+
+            // Imprimir información sobre la mutación
+            cout << "Mutación: intercambiando genes en las posiciones " << indice1 << " y " << indice2 << endl;
+            cout << "Antes de la mutación:" << endl;
+            cromosoma.imprimir();
+
+            // Intercambiar los genes
+            Pieza temp = cromosoma.getGene(indice1);
+            cromosoma.setGene(indice1, cromosoma.getGene(indice2));
+            cromosoma.setGene(indice2, temp);
+
+            cout << "Después de la mutación:" << endl;
+            cromosoma.imprimir();
+        }
+    }
+}
+
+
 void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tamanoPoblacion,
         int generaciones, double tasaMutacion) {
     
+    // Generamos la población inicial
     Poblacion poblacion;
     poblacion = generarPoblacionInicial(listaPiezas,listaStocks,tamanoPoblacion);
     
+    // Calculamos el fitnees de cada solución para elegir las mejores
     for (Cromosoma& cromosoma : poblacion.getCromosomas()) {
         calcularDesperdicio(cromosoma, listaStocks[0]);
     }
-
-    for (int generacion = 0; generacion < generaciones; ++generacion) {
+    poblacion.imprimir();
+    
+    //for (int generacion = 0; generacion < generaciones; ++generacion) {
         Poblacion nuevaPoblacion;
-        int numElites = 2; // Número de cromosomas élite que pasarán directamente a la nueva generación
+        int numElites = 2;
 
         // Seleccionar élites
         vector<Cromosoma> elites = seleccionarElitista(poblacion, numElites);
@@ -308,24 +420,37 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
 
         // Generar el resto de la nueva población mediante selección y cruce
         while (nuevaPoblacion.getCromosomas().size() < poblacion.getCromosomas().size()) {
-            Cromosoma padre1 = seleccionarRuleta(poblacion);  // o seleccionarTorneo
-            Cromosoma padre2 = seleccionarRuleta(poblacion);  // o seleccionarTorneo
+            Cromosoma padre1 = seleccionarRuleta(poblacion);
+            Cromosoma padre2 = seleccionarRuleta(poblacion);
+            
+            cout << "Padre 1:" << endl;
+            padre1.imprimir();
+            cout << "Padre 2:" << endl;
+            padre2.imprimir();
 
-//            auto [hijo1, hijo2] = cruzar(padre1, padre2);
-//            mutar(hijo1, tasaMutacion);
-//            mutar(hijo2, tasaMutacion);
-//
-//            nuevaPoblacion.addCromosoma(hijo1);
-//            nuevaPoblacion.addCromosoma(hijo2);
+            pair<Cromosoma, Cromosoma> hijos = cruzar(padre1, padre2);
+            Cromosoma hijo1 = hijos.first;
+            Cromosoma hijo2 = hijos.second;
+            
+            cout << "Hijo 1:" << endl;
+            hijo1.imprimir();
+            cout << "Hijo 2:" << endl;
+            hijo2.imprimir();
+            
+            mutar(hijo1, tasaMutacion);
+            mutar(hijo2, tasaMutacion);
+
+            nuevaPoblacion.addCromosoma(hijo1);
+            nuevaPoblacion.addCromosoma(hijo2);
         }
-    }
+    //}
 
     cout << endl; 
 }
 
 int main(int argc, char** argv) {
     srand(static_cast<unsigned>(time(0)));
-    int numPiezas = 40, i=0; 
+    int i=0; 
     int tamanoPoblacion = 10; 
     int generaciones = 50;
     double tasaMutacion = 0.1;
@@ -337,18 +462,17 @@ int main(int argc, char** argv) {
     sort(listaStocks.begin(), listaStocks.end(), compararStocks);
     sort(listaPiezas.begin(), listaPiezas.end(), compararPiezas);
     
+    cout << "Lista de Piezas:\n";
+    for (const Pieza& pieza : listaPiezas) {
+        pieza.imprimirPieza();
+    }
+    cout << "\nLista de Stock:\n";
+    listaStocks[0].imprimirStock();
+   cout << endl;
+    
     algoritmoGA(listaPiezas,listaStocks,tamanoPoblacion,generaciones,tasaMutacion);
     cout << "Ejecución del algoritmo GA finalizada." << endl;
-    
-//    cout << "Lista de Piezas:\n";
-//    for (const Pieza& pieza : listaPiezas) {
-//        pieza.imprimirPieza();
-//    }
-//    cout << "\nLista de Stock:\n";
-//    listaStocks[0].imprimirStock();
-//    
-//   cout << endl;
-//   
+   
     return 0;
 }
 

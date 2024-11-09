@@ -62,9 +62,9 @@ public:
         return bestCromosoma;
     }
 
-    void print() const {
+    void imprimir() const {
         for (const Cromosoma& cromosoma : cromosomas) {
-            cromosoma.print();
+            cromosoma.imprimir();
         }
     }
 };

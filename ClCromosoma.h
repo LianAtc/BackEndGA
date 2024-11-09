@@ -48,7 +48,7 @@ public:
         return fitness;
     }
     
-    void print() const {
+    void imprimir() const {
         for (const Pieza& pieza : genes) {
             pieza.imprimirPieza();
         }
