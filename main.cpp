@@ -27,7 +27,7 @@
 
 using namespace std;
 
-int numPiezas = 20;
+int numPiezas = 30;
 vector<vector<int>> matriz(numPiezas, vector<int>(numPiezas, -1));
 vector<vector<int>> solucion(numPiezas, vector<int>(numPiezas, -1));
 int anchoMayor,altoMayor;
@@ -221,7 +221,7 @@ Poblacion generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<Stock>& li
 
                 if (it != listaPiezas.end()) {
                     indice = distance(listaPiezas.begin(), it);
-                    listaPiezas[indice].imprimirPieza();
+//                    listaPiezas[indice].imprimirPieza();
                     //cout << "Ancho x Alto:" << anchoMayor << " , " << altoMayor<<endl;
                 }           
 
@@ -379,19 +379,55 @@ void mutar(Cromosoma& cromosoma, double tasaMutacion) {
             }
 
             // Imprimir información sobre la mutación
-            cout << "Mutación: intercambiando genes en las posiciones " << indice1 << " y " << indice2 << endl;
-            cout << "Antes de la mutación:" << endl;
-            cromosoma.imprimir();
+//            cout << "Mutación: intercambiando genes en las posiciones " << indice1 << " y " << indice2 << endl;
+//            cout << "Antes de la mutación:" << endl;
+//            cromosoma.imprimir();
 
             // Intercambiar los genes
             Pieza temp = cromosoma.getGene(indice1);
             cromosoma.setGene(indice1, cromosoma.getGene(indice2));
             cromosoma.setGene(indice2, temp);
 
-            cout << "Después de la mutación:" << endl;
-            cromosoma.imprimir();
+            //cout << "Después de la mutación:" << endl;
+//            cromosoma.imprimir();
         }
     }
+}
+
+void verificarColocacionCromosoma(const Cromosoma& cromosoma, const Stock& stock) {
+    int anchoActual = 0;
+    int alturaActual = 0;
+    int alturaFila = 0;
+    const int anchoMaximo = stock.getAncho();
+    const int altoMaximo = stock.getAlto();
+
+    cout << "Colocación de las piezas en el stock (" << anchoMaximo << "x" << altoMaximo << "):" << endl;
+
+    for (const Pieza& pieza : cromosoma.getGenes()) {
+        if (pieza.getID() == -1) break;  // Detener si el cromosoma tiene una pieza vacía (ID 0)
+
+        // Verificar si la pieza cabe en la fila actual
+        if (anchoActual + pieza.getW() <= anchoMaximo) {
+            // Colocar la pieza en la fila actual
+            cout << "Pieza ID: " << pieza.getID() << " colocada en (" << anchoActual << ", " << alturaActual << "), Tamaño: " << pieza.getW() << "x" << pieza.getH() << endl;
+            anchoActual += pieza.getW();
+            alturaFila = max(alturaFila, static_cast<int>(pieza.getH()));  // Actualizar la altura de la fila según la pieza más alta
+        } else {
+            // Mover a la siguiente fila
+            alturaActual += alturaFila;
+            if (alturaActual + pieza.getH() > altoMaximo) {
+                cout << "La pieza ID: " << pieza.getID() << " no cabe en el stock restante. Colocación terminada." << endl;
+                break;
+            }
+
+            // Colocar la pieza en la nueva fila
+            cout << "Pieza ID: " << pieza.getID() << " colocada en (0, " << alturaActual << "), Tamaño: " << pieza.getW() << "x" << pieza.getH() << endl;
+            anchoActual = pieza.getW();
+            alturaFila = pieza.getH();  // Nueva altura de la fila
+        }
+    }
+
+    cout << "Colocación finalizada." << endl;
 }
 
 
@@ -408,7 +444,7 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
     }
     poblacion.imprimir();
     
-    //for (int generacion = 0; generacion < generaciones; ++generacion) {
+    for (int generacion = 0; generacion < generaciones; ++generacion) {
         Poblacion nuevaPoblacion;
         int numElites = 2;
 
@@ -423,19 +459,25 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
             Cromosoma padre1 = seleccionarRuleta(poblacion);
             Cromosoma padre2 = seleccionarRuleta(poblacion);
             
-            cout << "Padre 1:" << endl;
-            padre1.imprimir();
-            cout << "Padre 2:" << endl;
-            padre2.imprimir();
+//            cout << "Padre 1:" << endl;
+//            padre1.imprimir();
+//            cout << "Padre 2:" << endl;
+//            padre2.imprimir();
+            
+            calcularDesperdicio(padre1, listaStocks[0]);
+            calcularDesperdicio(padre2, listaStocks[0]);
 
             pair<Cromosoma, Cromosoma> hijos = cruzar(padre1, padre2);
             Cromosoma hijo1 = hijos.first;
             Cromosoma hijo2 = hijos.second;
             
-            cout << "Hijo 1:" << endl;
-            hijo1.imprimir();
-            cout << "Hijo 2:" << endl;
-            hijo2.imprimir();
+            calcularDesperdicio(hijo1, listaStocks[0]);
+            calcularDesperdicio(hijo2, listaStocks[0]);
+            
+//            cout << "Hijo 1:" << endl;
+//            hijo1.imprimir();
+//            cout << "Hijo 2:" << endl;
+//            hijo2.imprimir();
             
             mutar(hijo1, tasaMutacion);
             mutar(hijo2, tasaMutacion);
@@ -443,16 +485,19 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
             nuevaPoblacion.addCromosoma(hijo1);
             nuevaPoblacion.addCromosoma(hijo2);
         }
-    //}
-
+    }
+    cout << "La mejor solución de la población actual es:" << endl;
+    Cromosoma mejorCromosoma = poblacion.getBestCromosoma();
+    mejorCromosoma.imprimir();
     cout << endl; 
+    verificarColocacionCromosoma(mejorCromosoma, listaStocks[0]);
 }
 
 int main(int argc, char** argv) {
     srand(static_cast<unsigned>(time(0)));
     int i=0; 
     int tamanoPoblacion = 10; 
-    int generaciones = 50;
+    int generaciones = 100;
     double tasaMutacion = 0.1;
     
     vector<int> resultado;

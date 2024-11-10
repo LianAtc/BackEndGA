@@ -25,7 +25,7 @@ private:
 public:
     Pieza(int id, float x, float y, float w, float h, bool r) 
         : id(id), x(x), y(y), w(w), h(h), r(r) {}
-    Pieza() : id(0), x(0), y(0), w(0), h(0), r(false) {}
+    Pieza() : id(-1), x(0), y(0), w(0), h(0), r(false) {}
 
     void imprimirPieza() const {
         cout << "Pieza ID: " << id << ", Posición: (" << x << ", " << y << "), "
