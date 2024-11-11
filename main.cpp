@@ -27,7 +27,7 @@
 
 using namespace std;
 
-int numPiezas = 10;
+int numPiezas = 100;
 vector<vector<int>> matriz(numPiezas, vector<int>(numPiezas, -1));
 vector<vector<int>> solucion(numPiezas, vector<int>(numPiezas, -1));
 int anchoMayor,altoMayor;
@@ -81,8 +81,8 @@ void imprimirMatriz(vector<vector<int>>& matriz) {
 vector<Pieza> generarListaPiezas(int cantidad) {
     vector<Pieza> listaPiezas;
     vector<pair<float, float>> medidasDisponibles = {
-        {25, 40}, {27, 45}, {30, 60}, {20, 60},
-        {30, 61}, {58, 118}, {19, 118}, {29, 59}
+        {40, 25}, {45, 27}, {60, 30}, {60, 20},
+        {61, 30}, {59, 29}, {15, 7.5}, {7.5,30}, {7.5,45}
     };
 
     for (int i = 0; i < cantidad; ++i) {
@@ -103,12 +103,26 @@ vector<Pieza> generarListaPiezas(int cantidad) {
 
 vector<Stock> generarListaStocks(int cantidad) {
     vector<Stock> listaStocks;
+    
+    // Inicializar la semilla aleatoria
+    srand(static_cast<unsigned int>(time(0)));
+
     for (int i = 0; i < cantidad; ++i) {
-        int w = (rand() % 200) + 150;
-        int h = (rand() % 100) + 50;
-        Stock s(w, h);
-        listaStocks.push_back(s);
+        int w, h;
+        
+        // Elegir aleatoriamente entre las dos opciones de tamaño
+        if (rand() % 2 == 0) {
+            w = 118;
+            h = 58;
+        } else {
+            w = 118;
+            h = 19;
+        }
+        
+        Stock s(w, h); // Crear el objeto Stock con las dimensiones seleccionadas
+        listaStocks.push_back(s); // Agregar a la lista
     }
+    
     return listaStocks;
 }
 
@@ -300,7 +314,7 @@ Poblacion generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<Stock>& li
                         ancho = pieza.getW();
                     }
                     if( heuristica != -1 ) menorH = heuristica;
-                    pieza.imprimirPieza();
+                    //pieza.imprimirPieza();
                 }
                 if (menorH == -1 || menorH == 100) break;
                 matriz[i][j]=piezaEscogida;
@@ -512,7 +526,7 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
     // Generamos la población inicial
     Poblacion poblacion;
     poblacion = generarPoblacionInicial(listaPiezas,listaStocks,tamanoPoblacion);
-    poblacion.imprimir();
+    //poblacion.imprimir();
     
     // Calculamos el fitnees de cada solución para elegir las mejores
     for (Cromosoma& cromosoma : poblacion.getCromosomas()) {
@@ -565,7 +579,7 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
     }
     cout << "La mejor solución de la población actual es:" << endl;
     Cromosoma mejorCromosoma = poblacion.getBestCromosoma();
-    mejorCromosoma.imprimir();
+    //mejorCromosoma.imprimir();
     cout << endl; 
     verificarColocacionCromosoma(mejorCromosoma, listaStocks[0]);
 }
@@ -573,17 +587,14 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
 int main(int argc, char** argv) {
     srand(static_cast<unsigned>(time(0)));
     int i=0; 
-    int tamanoPoblacion = 5; 
-    int generaciones = 5;
+    int tamanoPoblacion = 50; 
+    int generaciones = 50;
     double tasaMutacion = 0.1;
     
     vector<int> resultado;
     vector<Pieza> listaPiezas = generarListaPiezas(numPiezas);
     vector<Stock> listaStocks = generarListaStocks(1);
 
-    sort(listaStocks.begin(), listaStocks.end(), compararStocks);
-    sort(listaPiezas.begin(), listaPiezas.end(), compararPiezas);
-    
     cout << "Lista de Piezas:\n";
     for (const Pieza& pieza : listaPiezas) {
         pieza.imprimirPieza();
