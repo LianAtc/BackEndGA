@@ -39,6 +39,9 @@ public:
     float getW() const { return w; }
     float getH() const { return h; }
     bool getRot() const { return r; }
+    void setW(float nuevoW) { w = nuevoW; }
+    void setH(float nuevoH) { h = nuevoH; }
+    void rotarPieza() { swap(w, h); } // Método para rotar la pieza
 };
 
 

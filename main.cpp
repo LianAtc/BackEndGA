@@ -27,7 +27,7 @@
 
 using namespace std;
 
-int numPiezas = 30;
+int numPiezas = 10;
 vector<vector<int>> matriz(numPiezas, vector<int>(numPiezas, -1));
 vector<vector<int>> solucion(numPiezas, vector<int>(numPiezas, -1));
 int anchoMayor,altoMayor;
@@ -60,9 +60,9 @@ vector<int> convertirMatrizACromosoma(const vector<vector<int>>& matriz) {
         cantidad_actual++;
     }
     
-    for (int elemento : lista) {
-        cout << elemento << " ";
-    }
+//    for (int elemento : lista) {
+//        cout << elemento << " ";
+//    }
     
     return lista;
 }
@@ -80,12 +80,20 @@ void imprimirMatriz(vector<vector<int>>& matriz) {
 
 vector<Pieza> generarListaPiezas(int cantidad) {
     vector<Pieza> listaPiezas;
+    vector<pair<float, float>> medidasDisponibles = {
+        {25, 40}, {27, 45}, {30, 60}, {20, 60},
+        {30, 61}, {58, 118}, {19, 118}, {29, 59}
+    };
+
     for (int i = 0; i < cantidad; ++i) {
         float x = 0;
         float y = 0;
-        float w = (rand() % 50) + 30;
-        float h = (rand() % 20) + 10;
         bool rotada = 0;
+
+        // Elegir un par de medidas aleatoriamente
+        int indiceAleatorio = rand() % medidasDisponibles.size();
+        float w = medidasDisponibles[indiceAleatorio].first;
+        float h = medidasDisponibles[indiceAleatorio].second;
         
         Pieza p(i, x, y, w, h, rotada);
         listaPiezas.push_back(p);
@@ -184,11 +192,38 @@ vector<int> obtenerListaIDs(const std::vector<Pieza>& listaPiezas) {
     return listaIDs;
 }
 
+double calcularHeuristica(const Stock& stock, const Pieza& pieza) {
+    double desperdicio;
+
+    if(pieza.getH()>stock.getH()) return -1;
+    if(anchoMayor+pieza.getW()<= stock.getW()){
+        if(altoMayor>pieza.getH()){
+            desperdicio = (((altoMayor)*(anchoMayor+pieza.getW())) 
+                    - ((anchoMayor*altoMayor)+
+                    (pieza.getW()*pieza.getH()))) 
+                    / ((altoMayor)*(anchoMayor+
+                    pieza.getW()));
+        }
+        else{
+            desperdicio = (((pieza.getH())*(anchoMayor+pieza.getW()) 
+                    - (anchoMayor*altoMayor)+
+                    (pieza.getW()* pieza.getH())))
+                    / ((pieza.getH())*
+                    (anchoMayor+pieza.getW()));
+        }
+    }else{
+        return -1;
+    }
+    
+    return desperdicio;
+}
+
+
 Poblacion generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<Stock>& listaStocks2, int tamanoPoblacion) {
     Poblacion poblacion(tamanoPoblacion, numPiezas);
     
     Stock solucion;
-    int numPiezaLista=0,indiceAleatorio=0,entra=0,menorH=100,a,b;
+    int numPiezaLista=0,indiceAleatorio=0,entra=0,menorH=100,a,b,idAleatorio;
     int piezaEscogida,i=0,j=0,piezaPasada,ancho,alto,intentos=0,indice;
     double feromonas,heuristica,probabillidad=100,mProb=0;
     vector<int> indicePiezaEscogida;
@@ -207,48 +242,89 @@ Poblacion generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<Stock>& li
         for (const Pieza& pieza2 : listaPiezas) {
             if (listaPiezas.empty()) break;
             entra=0,i=0,intentos=0;
-            while(intentos <= (numPiezas)){
-                // Random por numero de piezas existentes
-                if (listaPiezas.empty()) break;
+            while(entra==0 && intentos < (numPiezas-1)){ 
                 auto listaIDs = obtenerListaIDs(listaPiezas);
-                int idAleatorio = rand() % listaIDs.size();
-                int indiceAleatorio = listaIDs[idAleatorio];
-                // Obtenemos el indice del id que queremos
+                idAleatorio = rand() % listaIDs.size();
+                indiceAleatorio = listaIDs[idAleatorio];
+
                 auto it = find_if(listaPiezas.begin(), listaPiezas.end(), 
                               [indiceAleatorio](const Pieza& pieza) {
                                   return pieza.getID() == indiceAleatorio;
                               });
-
+                              
                 if (it != listaPiezas.end()) {
                     indice = distance(listaPiezas.begin(), it);
-//                    listaPiezas[indice].imprimirPieza();
+                    //listaPiezas[indice].imprimirPieza();
                     //cout << "Ancho x Alto:" << anchoMayor << " , " << altoMayor<<endl;
                 }           
 
-                // Si entra la pieza la insertamos
+
                 if (find(indicePiezaEscogida.begin(), indicePiezaEscogida.end(), indiceAleatorio) == indicePiezaEscogida.end()) {
                     if (listaPiezas[indice].getW() + anchoMayor <= listaStocks[0].getW() && listaPiezas[indice].getH() <= listaStocks[0].getH()) {
+                        entra=1;
                         indicePiezaEscogida.push_back(indiceAleatorio);
-                        // Defino la longitud más grande a cortar en guillotina         
-                        if(altoMayor>listaPiezas[indice].getH()){
-                             anchoMayor += listaPiezas[indice].getW();
-                        }else{
-                            anchoMayor += listaPiezas[indice].getW();
-                            altoMayor = listaPiezas[indice].getH();
-                        }
-
-                        // Elimino pieza inicial
-                        auto it2 = std::find_if(listaPiezas.begin(), listaPiezas.end(), [indiceAleatorio](const Pieza& pieza) {
-                            return pieza.getID() == indiceAleatorio;
-                        });
-                        if (it2 != listaPiezas.end()) {
-                            listaPiezas.erase(it2);
-                        }
-                        matriz[i][j]=indiceAleatorio;
-                        i++;
+                    }else{
+                        entra=0;
                     }
                 }          
                 intentos++;
+            }
+            if(entra==0) break;
+            intentos=0;
+            
+            anchoMayor = listaPiezas[indice].getW();
+            altoMayor = listaPiezas[indice].getH();
+            
+            //cout << "Ancho x Alto:" << anchoMayor << " , " << altoMayor<<endl;  
+            
+            // Elimino pieza inicial
+            auto it2 = std::find_if(listaPiezas.begin(), listaPiezas.end(), [indiceAleatorio](const Pieza& pieza) {
+                return pieza.getID() == indiceAleatorio;
+            });
+            if (it2 != listaPiezas.end()) {
+                listaPiezas.erase(it2);
+            }
+            
+            matriz[i][j]=indiceAleatorio;
+            i++;
+            piezaPasada = indiceAleatorio;
+            
+            for (const Pieza& pieza2 : listaPiezas) {
+                for (const Pieza& pieza : listaPiezas) {
+                    heuristica = calcularHeuristica(listaStocks[0],pieza);
+                    probabillidad = heuristica;
+                    if(mProb<=probabillidad){    
+                        mProb = probabillidad;
+                        piezaEscogida = pieza.getID();
+                        alto = pieza.getH();
+                        ancho = pieza.getW();
+                    }
+                    if( heuristica != -1 ) menorH = heuristica;
+                    pieza.imprimirPieza();
+                }
+                if (menorH == -1 || menorH == 100) break;
+                matriz[i][j]=piezaEscogida;
+                i++;
+                
+                if(altoMayor>alto){
+                anchoMayor += ancho;
+                }else{
+                    anchoMayor += ancho;
+                    altoMayor = alto;
+                }
+                
+                indicePiezaEscogida.push_back(piezaEscogida);
+                piezaPasada = piezaEscogida;
+                
+                // Elimino pieza escogida
+                auto it = std::find_if(listaPiezas.begin(), listaPiezas.end(), [piezaEscogida](const Pieza& pieza) {
+                    return pieza.getID() == piezaEscogida;
+                });
+                if (it != listaPiezas.end()) {
+                    listaPiezas.erase(it);
+                }
+                //desTotal+=heuristica;
+                mProb=0;piezaEscogida=-1;menorH=100;
             }
             listaStocks[0].setH(listaStocks[0].getH()-altoMayor);
             altoMayor=0;
@@ -257,7 +333,6 @@ Poblacion generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<Stock>& li
         }
         cromosomaTemp = convertirMatrizACromosoma(matriz);
         generarCromosoma(cromosoma,cromosomaTemp,listaPiezas2);
-        //cout<<"Impresión cromosoma"<<endl;
         //cromosoma.imprimir();
         poblacion.setCromosoma(n, cromosoma);
     }
@@ -437,6 +512,7 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
     // Generamos la población inicial
     Poblacion poblacion;
     poblacion = generarPoblacionInicial(listaPiezas,listaStocks,tamanoPoblacion);
+    poblacion.imprimir();
     
     // Calculamos el fitnees de cada solución para elegir las mejores
     for (Cromosoma& cromosoma : poblacion.getCromosomas()) {
@@ -485,6 +561,7 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
             nuevaPoblacion.addCromosoma(hijo1);
             nuevaPoblacion.addCromosoma(hijo2);
         }
+        
     }
     cout << "La mejor solución de la población actual es:" << endl;
     Cromosoma mejorCromosoma = poblacion.getBestCromosoma();
@@ -496,8 +573,8 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
 int main(int argc, char** argv) {
     srand(static_cast<unsigned>(time(0)));
     int i=0; 
-    int tamanoPoblacion = 10; 
-    int generaciones = 100;
+    int tamanoPoblacion = 5; 
+    int generaciones = 5;
     double tasaMutacion = 0.1;
     
     vector<int> resultado;
