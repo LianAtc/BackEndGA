@@ -27,7 +27,7 @@
 
 using namespace std;
 
-int numPiezas = 100;
+int numPiezas = 15;
 vector<vector<int>> matriz(numPiezas, vector<int>(numPiezas, -1));
 vector<vector<int>> solucion(numPiezas, vector<int>(numPiezas, -1));
 int anchoMayor,altoMayor;
@@ -81,8 +81,7 @@ void imprimirMatriz(vector<vector<int>>& matriz) {
 vector<Pieza> generarListaPiezas(int cantidad) {
     vector<Pieza> listaPiezas;
     vector<pair<float, float>> medidasDisponibles = {
-        {40, 25}, {45, 27}, {60, 30}, {60, 20},
-        {61, 30}, {59, 29}, {15, 7.5}, {7.5,30}, {7.5,45}
+        {45, 8.6}, {15, 7.5}
     };
 
     for (int i = 0; i < cantidad; ++i) {
@@ -112,11 +111,11 @@ vector<Stock> generarListaStocks(int cantidad) {
         
         // Elegir aleatoriamente entre las dos opciones de tamaño
         if (rand() % 2 == 0) {
-            w = 118;
-            h = 58;
+            w = 60;
+            h = 60;
         } else {
-            w = 118;
-            h = 19;
+            w = 45;
+            h = 45;
         }
         
         Stock s(w, h); // Crear el objeto Stock con las dimensiones seleccionadas
@@ -397,54 +396,137 @@ vector<Cromosoma> seleccionarElitista(const Poblacion& poblacion, int numElites)
 }
 
 pair<Cromosoma, Cromosoma> cruzar(const Cromosoma& padre1, const Cromosoma& padre2) {
-    int tamano = padre1.getGenes().size();
-    Cromosoma hijo1(tamano);
-    Cromosoma hijo2(tamano);
-    set<int> genesUsadosHijo1;
-    set<int> genesUsadosHijo2;
-
-    // Seleccionar un punto de cruce aleatorio
-    int puntoCruce = rand() % tamano;
-
-    // Copiar genes de los padres a los hijos antes del punto de cruce
-    for (int i = 0; i < puntoCruce; ++i) {
-        hijo1.setGene(i, padre1.getGene(i));
-        hijo2.setGene(i, padre2.getGene(i));
-        genesUsadosHijo1.insert(padre1.getGene(i).getID());
-        genesUsadosHijo2.insert(padre2.getGene(i).getID());
+    
+    // Ignoramos los valores dummy
+    int tamanoPadre1 = 0;
+    for (const Pieza& gen : padre1.getGenes()) {
+        if (gen.getID() == -1) break;
+        ++tamanoPadre1;
     }
 
-    // Completar los hijos después del punto de cruce sin duplicados
-    for (int i = puntoCruce; i < tamano; ++i) {
-        if (genesUsadosHijo1.find(padre2.getGene(i).getID()) == genesUsadosHijo1.end()) {
-            hijo1.setGene(i, padre2.getGene(i));
-            genesUsadosHijo1.insert(padre2.getGene(i).getID());
-        } else {
-            // Encontrar un gen único de padre1
-            for (const Pieza& gen : padre1.getGenes()) {
-                if (genesUsadosHijo1.find(gen.getID()) == genesUsadosHijo1.end()) {
-                    hijo1.setGene(i, gen);
-                    genesUsadosHijo1.insert(gen.getID());
-                    break;
+    int tamanoPadre2 = 0;
+    for (const Pieza& gen : padre2.getGenes()) {
+        if (gen.getID() == -1) break;
+        ++tamanoPadre2;
+    }
+	
+    int tamanoCruce = min(tamanoPadre1, tamanoPadre2);
+    
+    // Imprimir los tamaños calculados para ver si son correctos
+    cout << "Tamaño numérico del padre1: " << tamanoPadre1 << endl;
+    cout << "Tamaño numérico del padre2: " << tamanoPadre2 << endl;
+    cout << "Tamaño numérico usado para el cruce: " << tamanoCruce << endl;
+    
+    Cromosoma hijo1 = padre1;  // Copias de los padres
+    Cromosoma hijo2 = padre2;
+    
+    if (tamanoCruce == 0) {
+        cout << "No hay parte numérica para realizar el cruce. Se devuelven los padres sin cambios." << endl;
+        return make_pair(hijo1, hijo2);
+    }
+
+    // Seleccionar dos puntos de cruce aleatorios
+    int punto1 = rand() % tamanoCruce;
+    int punto2 = rand() % tamanoCruce;
+    if (punto1 > punto2) swap(punto1, punto2);
+    
+    cout << "Punto de cruce 1: " << punto1 << ", Punto de cruce 2: " << punto2 << endl;
+    
+    // Realizar el cruce PMX solo en la porción numérica común
+    cout << "Genes del padre1 antes del cruce: ";
+    for (int i = 0; i < tamanoPadre1; ++i) {
+        cout << padre1.getGene(i).getID() << " ";
+    }
+    cout << endl;
+
+    cout << "Genes del padre2 antes del cruce: ";
+    for (int i = 0; i < tamanoPadre2; ++i) {
+        cout << padre2.getGene(i).getID() << " ";
+    }
+    cout << endl;
+	
+    // Mapeo parcial de genes entre los dos puntos de cruce
+    for (int i = punto1; i <= punto2; ++i) {
+        // Intercambiar genes entre los hijos en el rango seleccionado
+        Pieza genPadre1 = padre1.getGene(i);
+        Pieza genPadre2 = padre2.getGene(i);
+
+        hijo1.setGene(i, genPadre2);
+        hijo2.setGene(i, genPadre1);
+    }
+    
+    // Imprimir genes de los hijos después del cruce
+    cout << "Genes del hijo1 después del cruce: ";
+    for (int i = 0; i < hijo1.getGenes().size(); ++i) {
+        cout << hijo1.getGene(i).getID() << " ";
+    }
+    cout << endl;
+
+    cout << "Genes del hijo2 después del cruce: ";
+    for (int i = 0; i < hijo2.getGenes().size(); ++i) {
+        cout << hijo2.getGene(i).getID() << " ";
+    }
+    cout << endl;
+    
+    // Resolver duplicados en hijo1
+    for (int i = 0; i < tamanoCruce; ++i) {
+        if (i < punto1 || i > punto2) {
+            Pieza genPadre = hijo1.getGene(i);
+
+            // Verificar si el gen ya está presente en otras partes del hijo1 fuera del rango de cruce
+            bool duplicadoAntes = find_if(hijo1.getGenes().begin(), hijo1.getGenes().begin() + punto1,
+                                          [&genPadre](const Pieza& pieza) { return pieza.getID() == genPadre.getID() && genPadre.getID() != -1; }) != hijo1.getGenes().begin() + punto1;
+
+            bool duplicadoDespues = find_if(hijo1.getGenes().begin() + punto2 + 1, hijo1.getGenes().end(),
+                                            [&genPadre](const Pieza& pieza) { return pieza.getID() == genPadre.getID() && genPadre.getID() != -1; }) != hijo1.getGenes().end();
+
+            if (duplicadoAntes || duplicadoDespues) {
+
+                // Reemplazar el duplicado con un gen de padre2 que no esté en el hijo1
+                bool reemplazoHecho = false;
+                for (int j = 0; j < tamanoCruce; ++j) {
+                    Pieza genReemplazo = padre2.getGene(j);
+                    if (find_if(hijo1.getGenes().begin(), hijo1.getGenes().end(),
+                                [&genReemplazo](const Pieza& pieza) { return pieza.getID() == genReemplazo.getID(); }) == hijo1.getGenes().end()) {
+                        hijo1.setGene(i, genReemplazo);
+                        reemplazoHecho = true;
+                        break;
+                    }
                 }
             }
         }
+    }
 
-        if (genesUsadosHijo2.find(padre1.getGene(i).getID()) == genesUsadosHijo2.end()) {
-            hijo2.setGene(i, padre1.getGene(i));
-            genesUsadosHijo2.insert(padre1.getGene(i).getID());
-        } else {
-            // Encontrar un gen único de padre2
-            for (const Pieza& gen : padre2.getGenes()) {
-                if (genesUsadosHijo2.find(gen.getID()) == genesUsadosHijo2.end()) {
-                    hijo2.setGene(i, gen);
-                    genesUsadosHijo2.insert(gen.getID());
-                    break;
+    // Resolver duplicados en hijo2
+    for (int i = 0; i < tamanoCruce; ++i) {
+        if (i < punto1 || i > punto2) {
+            Pieza genPadre = hijo2.getGene(i);
+
+            // Verificar si el gen ya está presente en otras partes del hijo2 fuera del rango de cruce
+            bool duplicadoAntes = find_if(hijo2.getGenes().begin(), hijo2.getGenes().begin() + punto1,
+                                          [&genPadre](const Pieza& pieza) { return pieza.getID() == genPadre.getID() && genPadre.getID() != -1; }) != hijo2.getGenes().begin() + punto1;
+
+            bool duplicadoDespues = find_if(hijo2.getGenes().begin() + punto2 + 1, hijo2.getGenes().end(),
+                                            [&genPadre](const Pieza& pieza) { return pieza.getID() == genPadre.getID() && genPadre.getID() != -1; }) != hijo2.getGenes().end();
+
+            if (duplicadoAntes || duplicadoDespues) {
+
+                // Reemplazar el duplicado con un gen de padre1 que no esté en el hijo2
+                bool reemplazoHecho = false;
+                for (int j = 0; j < tamanoCruce; ++j) {
+                    Pieza genReemplazo = padre1.getGene(j);
+                    if (find_if(hijo2.getGenes().begin(), hijo2.getGenes().end(),
+                                [&genReemplazo](const Pieza& pieza) { return pieza.getID() == genReemplazo.getID(); }) == hijo2.getGenes().end()) {
+                        hijo2.setGene(i, genReemplazo);
+                        reemplazoHecho = true;
+                        break;
+                    }
                 }
             }
         }
     }
 
+    
     return make_pair(hijo1, hijo2);
 }
 
@@ -519,21 +601,60 @@ void verificarColocacionCromosoma(const Cromosoma& cromosoma, const Stock& stock
     cout << "Colocación finalizada." << endl;
 }
 
+// Función para verificar si un cromosoma es una solución válida
+bool verificarCromosoma(const Cromosoma& cromosoma, const Stock& stock) {
+    float anchoMaximo = stock.getAncho();
+    float altoMaximo = stock.getAlto();
+    float anchoFilaActual = 0;
+    float alturaFilaActual = 0;
+    float alturaTotal = 0;
+
+    for (const Pieza& pieza : cromosoma.getGenes()) {
+        if (pieza.getID() == -1) break; // Ignorar posiciones vacías
+
+        // Verificar si la pieza cabe en la fila actual
+        if (anchoFilaActual + pieza.getW() <= anchoMaximo) {
+            // Colocar la pieza en la fila actual
+            anchoFilaActual += pieza.getW();
+            alturaFilaActual = max(alturaFilaActual, pieza.getH());
+        } else {
+            // Mover a la siguiente fila
+            alturaTotal += alturaFilaActual;
+            if (alturaTotal + pieza.getH() > altoMaximo) {
+                // La pieza no encaja en el stock, la solución es inválida
+                return false;
+            } else {
+                // Colocar la pieza en la nueva fila
+                anchoFilaActual = pieza.getW();
+                alturaFilaActual = pieza.getH();
+            }
+        }
+    }
+
+    // Si todas las piezas encajan, la solución es válida
+    return true;
+}
 
 void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tamanoPoblacion,
         int generaciones, double tasaMutacion) {
     
-    // Generamos la población inicial
+    int validoH1, validoH2;
     Poblacion poblacion;
     poblacion = generarPoblacionInicial(listaPiezas,listaStocks,tamanoPoblacion);
+    Cromosoma hijo1, hijo2,hijo1Original,hijo2Original ;
     //poblacion.imprimir();
     
     // Calculamos el fitnees de cada solución para elegir las mejores
     for (Cromosoma& cromosoma : poblacion.getCromosomas()) {
         calcularDesperdicio(cromosoma, listaStocks[0]);
+        validoH1 = verificarCromosoma(cromosoma,listaStocks[0]);
+        for (int i = 0; i < cromosoma.getGenes().size(); ++i) {
+            cout << cromosoma.getGene(i).getID() << " ";
+        }
+        cout << "Valido: " << validoH1 << endl;
     }
     poblacion.imprimir();
-    
+     
     for (int generacion = 0; generacion < generaciones; ++generacion) {
         Poblacion nuevaPoblacion;
         int numElites = 2;
@@ -546,40 +667,76 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
 
         // Generar el resto de la nueva población mediante selección y cruce
         while (nuevaPoblacion.getCromosomas().size() < poblacion.getCromosomas().size()) {
-            Cromosoma padre1 = seleccionarRuleta(poblacion);
-            Cromosoma padre2 = seleccionarRuleta(poblacion);
             
-//            cout << "Padre 1:" << endl;
-//            padre1.imprimir();
-//            cout << "Padre 2:" << endl;
-//            padre2.imprimir();
+            // Ingresan soluciones validas
+            Cromosoma padre1 = seleccionarRuleta(poblacion);
+            Cromosoma padre2;
+            do {
+                padre2 = seleccionarRuleta(poblacion);
+            } while (padre1 == padre2);
             
             calcularDesperdicio(padre1, listaStocks[0]);
             calcularDesperdicio(padre2, listaStocks[0]);
 
-            pair<Cromosoma, Cromosoma> hijos = cruzar(padre1, padre2);
-            Cromosoma hijo1 = hijos.first;
-            Cromosoma hijo2 = hijos.second;
+            do {
+                pair<Cromosoma, Cromosoma> hijos = cruzar(padre1, padre2);
+
+                // Verificamos una solucion valida
+                hijo1 = hijos.first;
+                hijo2 = hijos.second;
+
+                validoH1 = verificarCromosoma(hijo1,listaStocks[0]);
+                validoH2 = verificarCromosoma(hijo2,listaStocks[0]);
+                
+            } while (validoH1 ==0 | validoH2==0);
+            cout << "Genes del hijo1 después del cruce: ";
+            for (int i = 0; i < hijo1.getGenes().size(); ++i) {
+                cout << hijo1.getGene(i).getID() << " ";
+            }
+            cout << endl;
+            cout << "Genes del hijo2 después del cruce: ";
+            for (int i = 0; i < hijo2.getGenes().size(); ++i) {
+                cout << hijo2.getGene(i).getID() << " ";
+            }
+            cout << endl;
+            cout << "Cruce valido " << endl;
+            
+            hijo1Original = hijo1;
+            hijo2Original = hijo2;
+            
+            do{
+                hijo1 = hijo1Original;
+                hijo2 = hijo2Original;
+                
+                mutar(hijo1, tasaMutacion);
+                mutar(hijo2, tasaMutacion);
+
+                validoH1 = verificarCromosoma(hijo1,listaStocks[0]);
+                validoH2 = verificarCromosoma(hijo2,listaStocks[0]);
+                
+            }while(validoH1==0 | validoH2==0);
+            cout << "Genes del hijo1 después de la mutación: ";
+            for (int i = 0; i < hijo1.getGenes().size(); ++i) {
+                cout << hijo1.getGene(i).getID() << " ";
+            }
+            cout << endl;
+            cout << "Genes del hijo2 después de la mutación: ";
+            for (int i = 0; i < hijo2.getGenes().size(); ++i) {
+                cout << hijo2.getGene(i).getID() << " ";
+            }
+            cout << endl;
+            cout << "Mutación valido " << endl;
             
             calcularDesperdicio(hijo1, listaStocks[0]);
             calcularDesperdicio(hijo2, listaStocks[0]);
             
-//            cout << "Hijo 1:" << endl;
-//            hijo1.imprimir();
-//            cout << "Hijo 2:" << endl;
-//            hijo2.imprimir();
-            
-            mutar(hijo1, tasaMutacion);
-            mutar(hijo2, tasaMutacion);
-
             nuevaPoblacion.addCromosoma(hijo1);
             nuevaPoblacion.addCromosoma(hijo2);
         }
-        
     }
     cout << "La mejor solución de la población actual es:" << endl;
     Cromosoma mejorCromosoma = poblacion.getBestCromosoma();
-    //mejorCromosoma.imprimir();
+    mejorCromosoma.imprimir();
     cout << endl; 
     verificarColocacionCromosoma(mejorCromosoma, listaStocks[0]);
 }
@@ -587,8 +744,8 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
 int main(int argc, char** argv) {
     srand(static_cast<unsigned>(time(0)));
     int i=0; 
-    int tamanoPoblacion = 50; 
-    int generaciones = 50;
+    int tamanoPoblacion = 10; 
+    int generaciones = 10;
     double tasaMutacion = 0.1;
     
     vector<int> resultado;

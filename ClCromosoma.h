@@ -43,6 +43,10 @@ public:
     void setFitness(double fit) {
         fitness = fit;
     }
+    
+    bool operator==(const Cromosoma& otro) const {
+        return this->getGenes() == otro.getGenes(); // Compara los genes de los cromosomas
+    }
 
     double getFitness() const {
         return fitness;
