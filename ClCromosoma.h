@@ -31,6 +31,8 @@ public:
             genes[index] = pieza;
         }
     }
+    
+    vector<Pieza>& getGenes() { return genes; }
 
     Pieza getGene(int index) const {
         return (index >= 0 && index < genes.size()) ? genes[index] : Pieza();

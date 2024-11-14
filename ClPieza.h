@@ -32,7 +32,7 @@ public:
              << "Dimensiones: " << w << "x" << h << ", Rotada: " 
              << (r ? "Sí" : "No") << endl;
     }
-    double calcularArea() const {return w * h;}
+    float calcularArea() const {return w * h;}
     int getID() const { return id; }
     float getX() const { return x; }
     float getY() const { return y; }
@@ -41,6 +41,8 @@ public:
     bool getRot() const { return r; }
     void setW(float nuevoW) { w = nuevoW; }
     void setH(float nuevoH) { h = nuevoH; }
+    void setX(int nuevoX) { x = nuevoX; }
+    void setY(int nuevoY) { y = nuevoY; }
     void rotarPieza() { swap(w, h); }
     bool operator==(const Pieza& otra) const {
         return (this->w == otra.w && this->h == otra.h && this->id == otra.id);

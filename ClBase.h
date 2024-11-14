@@ -17,11 +17,11 @@ using namespace std;
 
 class Stock {
 private:
-    int w, h;
+    float w, h;
     list<Pieza> listaDefectos; // Solo contiene piezas defectuosas
 
 public:
-    Stock(int w, int h) : w(w), h(h) {}
+    Stock(float w, int h) : w(w), h(h) {}
     Stock() : w(0), h(0) {}
 
     void agregarPieza(const Pieza& pieza) {
@@ -29,19 +29,14 @@ public:
     }
     float getW() const { return w; }
     float getH() const { return h; }
-    void setH(int nuevoAlto) {h = nuevoAlto;}
+    void setH(float nuevoAlto) {h = nuevoAlto;}
     void imprimirPiezas() const {
         cout << "Piezas en stock (" << w << "x" << h << "):\n";
         for (const Pieza& pieza : listaDefectos) {
             pieza.imprimirPieza();
         }
     }
-    int calcularArea() const {return w * h;}
-  
-    int getArea() const { return (w*h); }
-    int getAncho() const { return w; }
-    int getAlto() const { return h; }
-    
+    float calcularArea() const {return w * h;}    
     void imprimirStock() const { // Método para imprimir detalles del stock
         cout << "Stock de dimensiones: " << w << "x" << h << endl;
         //cout << "Total de piezas en stock: " << listaDefectos.size() << endl;

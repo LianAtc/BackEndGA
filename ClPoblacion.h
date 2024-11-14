@@ -54,7 +54,7 @@ public:
         Cromosoma bestCromosoma = cromosomas[0];
 
         for (const Cromosoma& cromosoma : cromosomas) {
-            if (cromosoma.getFitness() > bestFitness) {
+            if (cromosoma.getFitness() < bestFitness) {
                 bestFitness = cromosoma.getFitness();
                 bestCromosoma = cromosoma;
             }

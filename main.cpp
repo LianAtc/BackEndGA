@@ -27,56 +27,9 @@
 
 using namespace std;
 
-int numPiezas = 15;
-vector<vector<int>> matriz(numPiezas, vector<int>(numPiezas, -1));
-vector<vector<int>> solucion(numPiezas, vector<int>(numPiezas, -1));
-int anchoMayor,altoMayor;
-double desTotal;
-
-void resetearMatriz(vector<vector<int>>& matriz) {
-    for (auto& fila : matriz) {
-        for (auto& elemento : fila) {
-            elemento = -1;
-        }
-    }
-}
-
-vector<int> convertirMatrizACromosoma(const vector<vector<int>>& matriz) {
-    vector<int> lista;
-    int filas = matriz.size();
-    int columnas = matriz[0].size();
-
-    for (int j = 0; j < columnas; ++j) {       // Recorre las columnas primero
-        for (int i = 0; i < filas; ++i) {      // Luego las filas de cada columna
-            if (matriz[i][j] != -1) {          // Ignora valores -1
-                lista.push_back(matriz[i][j]);
-            }
-        }
-    }
-    
-    int cantidad_actual = lista.size();
-    while (cantidad_actual < numPiezas) {
-        lista.push_back(-1);
-        cantidad_actual++;
-    }
-    
-//    for (int elemento : lista) {
-//        cout << elemento << " ";
-//    }
-    
-    return lista;
-}
-
-void imprimirMatriz(vector<vector<int>>& matriz) {
-    for (int j = 0; j < (numPiezas-1); ++j) {
-        for (int i = 0; i < (numPiezas-1); ++i) {
-            if(matriz[i][j] == -1) break;
-            cout << matriz[i][j] << " "; // Debe imprimir mejor matriz, no matriz
-            //matriz[i][j] = -1;
-        }
-        cout << endl;  // Salto de línea después de cada fila
-    }
-}
+int numPiezas = 50;
+float anchoMayor,altoMayor;
+float desTotal;
 
 vector<Pieza> generarListaPiezas(int cantidad) {
     vector<Pieza> listaPiezas;
@@ -134,16 +87,15 @@ void ordenarPiezas(vector<Pieza>& listaPiezas) {
 }
 
 bool compararStocks(const Stock& a, const Stock& b) {
-    return (a.getAncho() * a.getAlto()) > (b.getAncho() * b.getAlto());
+    return (a.getW() * a.getH()) > (b.getW() * b.getH());
 }
 
 void ordenarStocks(vector<Stock>& stocks) {
     sort(stocks.begin(), stocks.end(), compararStocks);
 }
 
-// Función de evaluación del fitness: Minimizar el desperdicio.
-double calcularFitness(const vector<int>& cromosoma, const vector<Stock>& stocks) {
-    int desperdicio = 0;
+float calcularFitness(const vector<int>& cromosoma, const vector<Stock>& stocks) {
+    float desperdicio = 0;
     for (int piezaID : cromosoma) {
         desperdicio += piezaID;
     }
@@ -172,31 +124,6 @@ void calcularDesperdicio(Cromosoma& cromosoma, const Stock& stock) {
 
 }
 
-void generarCromosoma(Cromosoma& cromosoma, const std::vector<int>& cromosomaTemp, const std::vector<Pieza>& listaPiezas) {
-    // Recorremos la lista de IDs en cromosomaTemp
-    for (int i = 0; i < cromosomaTemp.size(); ++i) {
-        int piezaID = cromosomaTemp[i];
-
-        // Detenemos el llenado si encontramos un -1
-        if (piezaID == -1) {
-            break;
-        }
-
-        // Buscamos la pieza correspondiente en la lista de piezas por ID
-        auto it = std::find_if(listaPiezas.begin(), listaPiezas.end(), 
-                               [piezaID](const Pieza& pieza) {
-                                   return pieza.getID() == piezaID;
-                               });
-
-        if (it != listaPiezas.end()) {
-            // Si encontramos la pieza, la insertamos en el cromosoma
-            cromosoma.setGene(i, *it);
-        } else {
-            std::cerr << "Error: Pieza con ID " << piezaID << " no encontrada en la lista de piezas." << std::endl;
-        }
-    }
-}
-
 vector<int> obtenerListaIDs(const std::vector<Pieza>& listaPiezas) {
     std::vector<int> listaIDs;
     for (const auto& pieza : listaPiezas) {
@@ -209,6 +136,7 @@ double calcularHeuristica(const Stock& stock, const Pieza& pieza) {
     double desperdicio;
 
     if(pieza.getH()>stock.getH()) return -1;
+    if(pieza.getH()== stock.getH()) return -2; // Promueve el uso de piezas
     if(anchoMayor+pieza.getW()<= stock.getW()){
         if(altoMayor>pieza.getH()){
             desperdicio = (((altoMayor)*(anchoMayor+pieza.getW())) 
@@ -231,20 +159,55 @@ double calcularHeuristica(const Stock& stock, const Pieza& pieza) {
     return desperdicio;
 }
 
+void imprimirVector(const std::vector<int>& indicePiezaEscogida) {
+    for (int i = 0; i < indicePiezaEscogida.size(); i++) {
+        cout <<indicePiezaEscogida[i]<<" ";
+    }
+    cout<<endl;
+}
+
+Cromosoma convertirVectorACromosoma(const vector<int>& vec, int tamanoCromosoma, const vector<Pieza>& listaPiezas) {
+    Cromosoma cromosoma(tamanoCromosoma); // Crear un cromosoma con el tamaño especificado
+
+    // Llenar el cromosoma con los IDs del vector y asignar dimensiones basadas en listaPiezas
+    for (int i = 0; i < vec.size() && i < tamanoCromosoma; ++i) {
+        int id = vec[i];
+        // Buscar la pieza con el ID correspondiente en listaPiezas
+        auto it = find_if(listaPiezas.begin(), listaPiezas.end(), [id](const Pieza& pieza) {
+            return pieza.getID() == id;
+        });
+
+        if (it != listaPiezas.end()) {
+            cromosoma.setGene(i, *it); // Asignar la pieza encontrada al cromosoma
+        } else {
+            // Si no se encuentra la pieza, asignar una pieza vacía con ID -1
+            cromosoma.setGene(i, Pieza(-1, 0, 0, 0, 0, false));
+        }
+    }
+
+    // Llenar los espacios restantes con piezas de ID -1
+    for (int i = vec.size(); i < tamanoCromosoma; ++i) {
+        cromosoma.setGene(i, Pieza(-1, 0, 0, 0, 0, false)); // Pieza vacía
+    }
+
+    return cromosoma;
+}
 
 Poblacion generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<Stock>& listaStocks2, int tamanoPoblacion) {
     Poblacion poblacion(tamanoPoblacion, numPiezas);
     
     Stock solucion;
-    int numPiezaLista=0,indiceAleatorio=0,entra=0,menorH=100,a,b,idAleatorio;
-    int piezaEscogida,i=0,j=0,piezaPasada,ancho,alto,intentos=0,indice;
-    double feromonas,heuristica,probabillidad=100,mProb=0;
+    int numPiezaLista=0,indiceAleatorio=0,entra=0,a,b,idAleatorio;
+    int piezaEscogida,i=0,j=0,piezaPasada,intentos=0,indice;
+    float feromonas,heuristica,probabillidad=100,mProb=0,menorH=100,ancho,alto;
     vector<int> indicePiezaEscogida;
     
     for (int n = 0; n < tamanoPoblacion; ++n) {
         
+        for(int i=0;i<50;i++) cout<<"=";
+        cout<<endl;
+        cout << "Iteración "<< n << endl;
         Cromosoma cromosoma(listaPiezas2.size());
-        vector<int> cromosomaTemp(numPiezas, -1);
     
         vector<Pieza> listaPiezas = listaPiezas2;
         vector<Stock> listaStocks = listaStocks2;
@@ -267,12 +230,12 @@ Poblacion generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<Stock>& li
                               
                 if (it != listaPiezas.end()) {
                     indice = distance(listaPiezas.begin(), it);
-                    //listaPiezas[indice].imprimirPieza();
-                    //cout << "Ancho x Alto:" << anchoMayor << " , " << altoMayor<<endl;
+                    listaPiezas[indice].imprimirPieza();
                 }           
 
 
                 if (find(indicePiezaEscogida.begin(), indicePiezaEscogida.end(), indiceAleatorio) == indicePiezaEscogida.end()) {
+                    cout<< "Medidas: "<<listaPiezas[indice].getH()<<" "<<listaStocks[0].getH()<<endl;
                     if (listaPiezas[indice].getW() + anchoMayor <= listaStocks[0].getW() && listaPiezas[indice].getH() <= listaStocks[0].getH()) {
                         entra=1;
                         indicePiezaEscogida.push_back(indiceAleatorio);
@@ -288,7 +251,7 @@ Poblacion generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<Stock>& li
             anchoMayor = listaPiezas[indice].getW();
             altoMayor = listaPiezas[indice].getH();
             
-            //cout << "Ancho x Alto:" << anchoMayor << " , " << altoMayor<<endl;  
+            cout << "Ancho x Alto:" << anchoMayor << " , " << altoMayor<<endl;  
             
             // Elimino pieza inicial
             auto it2 = std::find_if(listaPiezas.begin(), listaPiezas.end(), [indiceAleatorio](const Pieza& pieza) {
@@ -298,26 +261,31 @@ Poblacion generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<Stock>& li
                 listaPiezas.erase(it2);
             }
             
-            matriz[i][j]=indiceAleatorio;
             i++;
             piezaPasada = indiceAleatorio;
+            
+            menorH=100;
             
             for (const Pieza& pieza2 : listaPiezas) {
                 for (const Pieza& pieza : listaPiezas) {
                     heuristica = calcularHeuristica(listaStocks[0],pieza);
                     probabillidad = heuristica;
-                    if(mProb<=probabillidad){    
+                    if(mProb<=probabillidad || heuristica == -2){    
                         mProb = probabillidad;
                         piezaEscogida = pieza.getID();
                         alto = pieza.getH();
                         ancho = pieza.getW();
                     }
                     if( heuristica != -1 ) menorH = heuristica;
-                    //pieza.imprimirPieza();
+                    if( heuristica == -2) break;
                 }
-                if (menorH == -1 || menorH == 100) break;
-                matriz[i][j]=piezaEscogida;
+                if (menorH == -1 || menorH == 100){
+                    cout<<"Ya no entran más"<<endl;
+                    break;
+                }
                 i++;
+                
+                cout << "Pieza acompañante: " << piezaEscogida<<endl;
                 
                 if(altoMayor>alto){
                 anchoMayor += ancho;
@@ -340,14 +308,20 @@ Poblacion generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<Stock>& li
                 mProb=0;piezaEscogida=-1;menorH=100;
             }
             listaStocks[0].setH(listaStocks[0].getH()-altoMayor);
+            cout << "Nuevo Alto: " << listaStocks[0].getH()<<endl;
             altoMayor=0;
             anchoMayor=0;
             j++;
+            
+            
         }
-        cromosomaTemp = convertirMatrizACromosoma(matriz);
-        generarCromosoma(cromosoma,cromosomaTemp,listaPiezas2);
-        //cromosoma.imprimir();
+        cromosoma =  convertirVectorACromosoma(indicePiezaEscogida,numPiezas,listaPiezas2);
         poblacion.setCromosoma(n, cromosoma);
+        
+        cout<<"Impresion Vector"<<endl;
+        imprimirVector(indicePiezaEscogida);
+        cout<<"Impresion Cromosoma"<<endl;
+        cromosoma.imprimir();
     }
     
     return poblacion;
@@ -380,14 +354,12 @@ Cromosoma seleccionarRuleta(const Poblacion& poblacion) {
 vector<Cromosoma> seleccionarElitista(const Poblacion& poblacion, int numElites) {
     vector<Cromosoma> elites;
 
-    // Copiar cromosomas y ordenarlos por fitness
     vector<Cromosoma> cromosomas = poblacion.getCromosomas();
     sort(cromosomas.begin(), cromosomas.end(), 
          [](const Cromosoma& a, const Cromosoma& b) {
              return a.getFitness() < b.getFitness();
          });
 
-    // Tomar los mejores numElites cromosomas
     for (int i = 0; i < numElites && i < cromosomas.size(); ++i) {
         elites.push_back(cromosomas[i]);
     }
@@ -531,80 +503,87 @@ pair<Cromosoma, Cromosoma> cruzar(const Cromosoma& padre1, const Cromosoma& padr
 }
 
 void mutar(Cromosoma& cromosoma, double tasaMutacion) {
-    // Generar un número aleatorio entre 0 y 1 para decidir si se muta
     double probabilidad = static_cast<double>(rand()) / RAND_MAX;
 
-    // Si la probabilidad es menor que la tasa de mutación, realiza la mutación
     if (probabilidad < tasaMutacion) {
         int tamano = cromosoma.getGenes().size();
+        
+        // Collect indices of valid genes (non -1)
+        vector<int> validIndices;
+        for (int i = 0; i < tamano; ++i) {
+            if (cromosoma.getGene(i).getID() == -1) break;
+            validIndices.push_back(i);
+        }
 
-        // Verificar que el tamaño del cromosoma permita la mutación
-        if (tamano > 1) {
-            // Elegir dos índices aleatorios diferentes para intercambiar
-            int indice1 = rand() % tamano;
-            int indice2 = rand() % tamano;
-
-            // Asegurarse de que los índices sean distintos
-            while (indice2 == indice1) {
-                indice2 = rand() % tamano;
+        // Only mutate if there are at least two valid indices
+        if (validIndices.size() > 1) {
+            // Randomly pick two distinct indices from valid indices
+            int index1 = validIndices[rand() % validIndices.size()];
+            int index2 = validIndices[rand() % validIndices.size()];
+            while (index2 == index1) {
+                index2 = validIndices[rand() % validIndices.size()];
             }
 
-            // Imprimir información sobre la mutación
-//            cout << "Mutación: intercambiando genes en las posiciones " << indice1 << " y " << indice2 << endl;
-//            cout << "Antes de la mutación:" << endl;
-//            cromosoma.imprimir();
+            // Debug print to see selected indices
+            cout << "Mutating genes at positions " << index1 << " and " << index2 << endl;
 
-            // Intercambiar los genes
-            Pieza temp = cromosoma.getGene(indice1);
-            cromosoma.setGene(indice1, cromosoma.getGene(indice2));
-            cromosoma.setGene(indice2, temp);
+            // Perform the mutation by swapping the genes
+            Pieza temp = cromosoma.getGene(index1);
+            cromosoma.setGene(index1, cromosoma.getGene(index2));
+            cromosoma.setGene(index2, temp);
 
-            //cout << "Después de la mutación:" << endl;
-//            cromosoma.imprimir();
+            // Print chromosome after mutation for verification
+            cout << "Chromosome after mutation:" << endl;
+            cromosoma.imprimir();
         }
     }
 }
 
-void verificarColocacionCromosoma(const Cromosoma& cromosoma, const Stock& stock) {
-    int anchoActual = 0;
-    int alturaActual = 0;
-    int alturaFila = 0;
-    const int anchoMaximo = stock.getAncho();
-    const int altoMaximo = stock.getAlto();
+void colocarPiezasEnOrden(Cromosoma& cromosoma, Stock& stock) {
+    float anchoMaximo = stock.getW();
+    float altoMaximo = stock.getH();
+    float anchoFilaActual = 0;
+    float alturaFilaActual = 0;
+    float alturaTotal = 0;
 
     cout << "Colocación de las piezas en el stock (" << anchoMaximo << "x" << altoMaximo << "):" << endl;
 
-    for (const Pieza& pieza : cromosoma.getGenes()) {
-        if (pieza.getID() == -1) break;  // Detener si el cromosoma tiene una pieza vacía (ID 0)
+    for (Pieza& pieza : cromosoma.getGenes()) {
+        if (pieza.getID() == -1) break; // Ignorar posiciones vacías
 
         // Verificar si la pieza cabe en la fila actual
-        if (anchoActual + pieza.getW() <= anchoMaximo) {
-            // Colocar la pieza en la fila actual
-            cout << "Pieza ID: " << pieza.getID() << " colocada en (" << anchoActual << ", " << alturaActual << "), Tamaño: " << pieza.getW() << "x" << pieza.getH() << endl;
-            anchoActual += pieza.getW();
-            alturaFila = max(alturaFila, static_cast<int>(pieza.getH()));  // Actualizar la altura de la fila según la pieza más alta
+        if (anchoFilaActual + pieza.getW() <= anchoMaximo) {
+            // Colocar la pieza en la fila actual y actualizar su posición
+            pieza.setX(anchoFilaActual);
+            pieza.setY(alturaTotal);
+
+            cout << "Pieza ID: " << pieza.getID() << " colocada en (" << pieza.getX() << ", " << pieza.getY() << "), Tamaño: " << pieza.getW() << "x" << pieza.getH() << endl;
+            anchoFilaActual += pieza.getW();
+            alturaFilaActual = max(alturaFilaActual, pieza.getH());
         } else {
             // Mover a la siguiente fila
-            alturaActual += alturaFila;
-            if (alturaActual + pieza.getH() > altoMaximo) {
+            alturaTotal += alturaFilaActual;
+            if (alturaTotal + pieza.getH() > altoMaximo) {
                 cout << "La pieza ID: " << pieza.getID() << " no cabe en el stock restante. Colocación terminada." << endl;
                 break;
             }
 
-            // Colocar la pieza en la nueva fila
-            cout << "Pieza ID: " << pieza.getID() << " colocada en (0, " << alturaActual << "), Tamaño: " << pieza.getW() << "x" << pieza.getH() << endl;
-            anchoActual = pieza.getW();
-            alturaFila = pieza.getH();  // Nueva altura de la fila
+            // Colocar la pieza en la nueva fila y actualizar su posición
+            pieza.setX(0);
+            pieza.setY(alturaTotal);
+
+            cout << "Pieza ID: " << pieza.getID() << " colocada en (" << pieza.getX() << ", " << pieza.getY() << "), Tamaño: " << pieza.getW() << "x" << pieza.getH() << endl;
+            anchoFilaActual = pieza.getW();
+            alturaFilaActual = pieza.getH();
         }
     }
 
     cout << "Colocación finalizada." << endl;
 }
 
-// Función para verificar si un cromosoma es una solución válida
 bool verificarCromosoma(const Cromosoma& cromosoma, const Stock& stock) {
-    float anchoMaximo = stock.getAncho();
-    float altoMaximo = stock.getAlto();
+    float anchoMaximo = stock.getW();
+    float altoMaximo = stock.getH();
     float anchoFilaActual = 0;
     float alturaFilaActual = 0;
     float alturaTotal = 0;
@@ -621,7 +600,7 @@ bool verificarCromosoma(const Cromosoma& cromosoma, const Stock& stock) {
             // Mover a la siguiente fila
             alturaTotal += alturaFilaActual;
             if (alturaTotal + pieza.getH() > altoMaximo) {
-                // La pieza no encaja en el stock, la solución es inválida
+                cout << "NO ENTRA" <<endl;
                 return false;
             } else {
                 // Colocar la pieza en la nueva fila
@@ -653,7 +632,7 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
         }
         cout << "Valido: " << validoH1 << endl;
     }
-    poblacion.imprimir();
+    //poblacion.imprimir();
      
     for (int generacion = 0; generacion < generaciones; ++generacion) {
         Poblacion nuevaPoblacion;
@@ -738,15 +717,15 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
     Cromosoma mejorCromosoma = poblacion.getBestCromosoma();
     mejorCromosoma.imprimir();
     cout << endl; 
-    verificarColocacionCromosoma(mejorCromosoma, listaStocks[0]);
+    colocarPiezasEnOrden(mejorCromosoma, listaStocks[0]);
 }
 
 int main(int argc, char** argv) {
     srand(static_cast<unsigned>(time(0)));
     int i=0; 
-    int tamanoPoblacion = 10; 
-    int generaciones = 10;
-    double tasaMutacion = 0.1;
+    int tamanoPoblacion = 50; 
+    int generaciones = 5;
+    double tasaMutacion = 0.5;
     
     vector<int> resultado;
     vector<Pieza> listaPiezas = generarListaPiezas(numPiezas);
