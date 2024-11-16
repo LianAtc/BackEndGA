@@ -30,14 +30,28 @@
 
 using namespace std;
 
-int numPiezas = 20;
+int numPiezas = 500;
 float anchoMayor,altoMayor;
 float desTotal;
 
 vector<Pieza> generarListaPiezas(int cantidad) {
     vector<Pieza> listaPiezas;
     vector<pair<float, float>> medidasDisponibles = {
-        {45, 8.6}, {15, 7.5}, {40, 25.0}, {40, 8.0}
+        {45, 8.6}, {15, 7.5}, 
+        {40, 25.0}, {40, 8.0},
+        {40, 20.0}, {30, 15.0},
+        {20, 10.0}, {40, 10.0},
+        {30, 7.5}, {25, 12.0},
+        {50, 9.5}, {35, 8.0},
+        {60, 10.0}, {45, 12.5},
+        {25, 5.0}, {55, 15.0},
+        {65, 20.0}, {20, 7.0},
+        {30, 5.5}, {40, 6.5},
+        {50, 12.0}, {35, 10.0},
+        {25, 8.0}, {45, 10.5},
+        {55, 11.5}, {30, 20.0},
+        {60, 15.0}, {35, 7.5},
+        {20, 5.0}, {25, 10.0}
     };
 
     for (int i = 0; i < cantidad; ++i) {
@@ -45,7 +59,6 @@ vector<Pieza> generarListaPiezas(int cantidad) {
         float y = 0;
         bool rotada = 0;
 
-        // Elegir un par de medidas aleatoriamente
         int indiceAleatorio = rand() % medidasDisponibles.size();
         float w = medidasDisponibles[indiceAleatorio].first;
         float h = medidasDisponibles[indiceAleatorio].second;
@@ -59,13 +72,11 @@ vector<Pieza> generarListaPiezas(int cantidad) {
 vector<Stock> generarListaStocks(int cantidad) {
     vector<Stock> listaStocks;
     
-    // Inicializar la semilla aleatoria
     srand(static_cast<unsigned int>(time(0)));
 
     for (int i = 0; i < cantidad; ++i) {
         int w, h;
         
-        // Elegir aleatoriamente entre las dos opciones de tamaño
         if (rand() % 2 == 0) {
             w = 60;
             h = 60;
@@ -74,8 +85,8 @@ vector<Stock> generarListaStocks(int cantidad) {
             h = 45;
         }
         
-        Stock s(w, h); // Crear el objeto Stock con las dimensiones seleccionadas
-        listaStocks.push_back(s); // Agregar a la lista
+        Stock s(w, h); 
+        listaStocks.push_back(s);
     }
     
     return listaStocks;
@@ -100,23 +111,19 @@ void ordenarStocks(vector<Stock>& stocks) {
 void calcularDesperdicio(Cromosoma& cromosoma, const Stock& stock) {
     double areaTotalPiezas = 0;
 
-    // Recorrer los genes del cromosoma (piezas) y sumar sus áreas.
     for (const Pieza& pieza : cromosoma.getGenes()) {
         areaTotalPiezas += pieza.calcularArea();
     }
-    cout << "Areas: "<< areaTotalPiezas <<" | "<< stock.calcularArea()<<endl;
 
     double areaStock = stock.calcularArea();
     double desperdicio = areaTotalPiezas/areaStock;
 
-    // Asegurarse de que el desperdicio no sea negativo
     if (desperdicio < 0) {
         desperdicio = 0;
     }
 
-    // Invertir el desperdicio para definir el fitness (menor desperdicio = mayor fitness)
-    double fitness = 100 * (1.0 - desperdicio); // Ajuste de fitness: más alto con menos desperdicio.
-    cromosoma.setFitness(fitness); // Configura el fitness del cromosoma.
+    double fitness = 100 * (1.0 - desperdicio);
+    cromosoma.setFitness(fitness); 
 
 }
 
@@ -128,32 +135,37 @@ vector<int> obtenerListaIDs(const std::vector<Pieza>& listaPiezas) {
     return listaIDs;
 }
 
-double calcularHeuristica(const Stock& stock, const Pieza& pieza) {
-    double desperdicio;
+double calcularHeuristica(Stock& stock, Pieza& pieza) {
+    double desperdicio, areaUsada, areaPiezas;
+    double desperdicioOriginal = 100;
+    double desperdicioRotado = 100;
 
-    if(pieza.getH()>stock.getH()) return -1; // Si no entra de altura -1
-    if(anchoMayor+pieza.getW()>stock.getW()) return -1; // Si es muy ancho no entra -1
-    // Uso de piezas del mismo tamaño de alto que entren
-    if(pieza.getH()== altoMayor && (pieza.getW()+anchoMayor <= stock.getW())) return -2;
-    if(anchoMayor+pieza.getW()<= stock.getW()){
-        if(altoMayor>pieza.getH()){
-            desperdicio = (((altoMayor)*(anchoMayor+pieza.getW())) 
-                    - ((anchoMayor*altoMayor)+
-                    (pieza.getW()*pieza.getH()))) 
-                    / ((altoMayor)*(anchoMayor+
-                    pieza.getW()));
-        }
-        else{
-            desperdicio = (((pieza.getH())*(anchoMayor+pieza.getW()) 
-                    - (anchoMayor*altoMayor)+
-                    (pieza.getW()* pieza.getH())))
-                    / ((pieza.getH())*
-                    (anchoMayor+pieza.getW()));
-        }
+    if (pieza.getH() <= stock.getH() && anchoMayor + pieza.getW() <= stock.getW()) {
+        areaUsada = (altoMayor > pieza.getH()) ? 
+            (altoMayor * (anchoMayor + pieza.getW())) : 
+            (pieza.getH() * (anchoMayor + pieza.getW()));
+
+        areaPiezas = (anchoMayor * altoMayor) + (pieza.getW() * pieza.getH());
+        desperdicioOriginal = (areaUsada - areaPiezas) / areaUsada;
     }
-    //cout << "Desperdicio :" << altoMayor << " , "<< anchoMayor << " | "<< pieza.getW() << " , "<< pieza.getH()<<endl;
-    
-    return desperdicio;
+
+    pieza.rotarPieza();
+    if (pieza.getH() <= stock.getH() && anchoMayor + pieza.getW() <= stock.getW()) {
+        areaUsada = (altoMayor > pieza.getH()) ? 
+            (altoMayor * (anchoMayor + pieza.getW())) : 
+            (pieza.getH() * (anchoMayor + pieza.getW()));
+
+        areaPiezas = (anchoMayor * altoMayor) + (pieza.getW() * pieza.getH());
+        desperdicioRotado = (areaUsada - areaPiezas) / areaUsada;
+    }
+
+    if (desperdicioRotado < desperdicioOriginal) {
+        if (desperdicioRotado == 0) return 0;    
+        return desperdicioRotado;
+    } else {
+        pieza.rotarPieza();
+        return desperdicioOriginal;
+    }
 }
 
 void imprimirVector(const std::vector<int>& indicePiezaEscogida) {
@@ -164,27 +176,23 @@ void imprimirVector(const std::vector<int>& indicePiezaEscogida) {
 }
 
 Cromosoma convertirVectorACromosoma(const vector<int>& vec, int tamanoCromosoma, const vector<Pieza>& listaPiezas) {
-    Cromosoma cromosoma(tamanoCromosoma); // Crear un cromosoma con el tamaño especificado
+    Cromosoma cromosoma(tamanoCromosoma);
 
-    // Llenar el cromosoma con los IDs del vector y asignar dimensiones basadas en listaPiezas
     for (int i = 0; i < vec.size() && i < tamanoCromosoma; ++i) {
         int id = vec[i];
-        // Buscar la pieza con el ID correspondiente en listaPiezas
         auto it = find_if(listaPiezas.begin(), listaPiezas.end(), [id](const Pieza& pieza) {
             return pieza.getID() == id;
         });
 
         if (it != listaPiezas.end()) {
-            cromosoma.setGene(i, *it); // Asignar la pieza encontrada al cromosoma
+            cromosoma.setGene(i, *it);
         } else {
-            // Si no se encuentra la pieza, asignar una pieza vacía con ID -1
             cromosoma.setGene(i, Pieza(-1, 0, 0, 0, 0, false));
         }
     }
 
-    // Llenar los espacios restantes con piezas de ID -1
     for (int i = vec.size(); i < tamanoCromosoma; ++i) {
-        cromosoma.setGene(i, Pieza(-1, 0, 0, 0, 0, false)); // Pieza vacía
+        cromosoma.setGene(i, Pieza(-1, 0, 0, 0, 0, false));
     }
 
     return cromosoma;
@@ -195,26 +203,23 @@ Poblacion generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<Stock>& li
     
     Stock solucion;
     int numPiezaLista=0,indiceAleatorio=0,entra=0,a,b,idAleatorio;
-    int piezaEscogida,i=0,j=0,piezaPasada,intentos=0,indice;
+    int piezaEscogida,piezaPasada,intentos=0,indice;
     float feromonas,heuristica,probabillidad=100,mProb=0,menorH=100,ancho,alto;
     vector<int> indicePiezaEscogida;
     
     for (int n = 0; n < tamanoPoblacion; ++n) {
         
-        for(int i=0;i<50;i++) cout<<"=";
-        cout<<endl;
-        cout << "Iteración "<< n << endl;
         Cromosoma cromosoma(listaPiezas2.size());
     
         vector<Pieza> listaPiezas = listaPiezas2;
         vector<Stock> listaStocks = listaStocks2;
         
-        altoMayor=0, anchoMayor=0, i=0, j=0;
+        altoMayor=0, anchoMayor=0;
         indicePiezaEscogida.clear();
 
         for (const Pieza& pieza2 : listaPiezas) {
             if (listaPiezas.empty()) break;
-            entra=0,i=0,intentos=0;
+            entra=0,intentos=0;
             while(entra==0 && intentos < (numPiezas-1)){ 
                 auto listaIDs = obtenerListaIDs(listaPiezas);
                 idAleatorio = rand() % listaIDs.size();
@@ -227,12 +232,11 @@ Poblacion generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<Stock>& li
                               
                 if (it != listaPiezas.end()) {
                     indice = distance(listaPiezas.begin(), it);
-                    listaPiezas[indice].imprimirPieza();
+//                    listaPiezas[indice].imprimirPieza();
                 }           
 
 
                 if (find(indicePiezaEscogida.begin(), indicePiezaEscogida.end(), indiceAleatorio) == indicePiezaEscogida.end()) {
-                    cout<< "Medidas: "<<listaPiezas[indice].getH()<<" "<<listaStocks[0].getH()<<endl;
                     if (listaPiezas[indice].getW() + anchoMayor <= listaStocks[0].getW() && listaPiezas[indice].getH() <= listaStocks[0].getH()) {
                         entra=1;
                         indicePiezaEscogida.push_back(indiceAleatorio);
@@ -248,7 +252,7 @@ Poblacion generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<Stock>& li
             anchoMayor = listaPiezas[indice].getW();
             altoMayor = listaPiezas[indice].getH();
             
-            cout << "Ancho x Alto:" << anchoMayor << " , " << altoMayor<<endl;  
+//            cout << "Ancho x Alto:" << anchoMayor << " , " << altoMayor<<endl;  
             
             // Elimino pieza inicial
             auto it2 = std::find_if(listaPiezas.begin(), listaPiezas.end(), [indiceAleatorio](const Pieza& pieza) {
@@ -258,31 +262,23 @@ Poblacion generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<Stock>& li
                 listaPiezas.erase(it2);
             }
             
-            i++;
             piezaPasada = indiceAleatorio;
             
-            menorH=100;
+            menorH=100,mProb=100;
             
-            for (const Pieza& pieza2 : listaPiezas) {
-                for (const Pieza& pieza : listaPiezas) {
-                    heuristica = calcularHeuristica(listaStocks[0],pieza);
-                    probabillidad = heuristica;
-                    if(mProb<=probabillidad || heuristica == -2){    
+            for (Pieza& pieza2 : listaPiezas) {
+                for (Pieza& pieza : listaPiezas) {
+                    probabillidad = calcularHeuristica(listaStocks[0],pieza);
+                    if(mProb<=probabillidad){    
                         mProb = probabillidad;
                         piezaEscogida = pieza.getID();
                         alto = pieza.getH();
                         ancho = pieza.getW();
                     }
-                    if( heuristica != -1 ) menorH = heuristica;
-                    if( heuristica == -2) break;
                 }
-                if (menorH == -1 || menorH == 100){
-                    cout<<"Ya no entran más"<<endl;
-                    break;
-                }
-                i++;
-                
-                cout << "Pieza acompañante: " << piezaEscogida<<endl;
+                if (menorH == 100) break;
+
+//                cout << "Pieza acompañante: " << piezaEscogida<<endl;
                 
                 if(altoMayor>alto){
                     anchoMayor += ancho;
@@ -305,20 +301,15 @@ Poblacion generarPoblacionInicial(vector<Pieza>& listaPiezas2, vector<Stock>& li
                 mProb=0;piezaEscogida=-1;menorH=100;
             }
             listaStocks[0].setH(listaStocks[0].getH()-altoMayor);
-            cout << "Nuevo Alto: " << listaStocks[0].getH()<<endl;
+//            cout << "Nuevo Alto: " << listaStocks[0].getH()<<endl;
             altoMayor=0;
             anchoMayor=0;
-            j++;
-            
-            
         }
         cromosoma =  convertirVectorACromosoma(indicePiezaEscogida,numPiezas,listaPiezas2);
         poblacion.setCromosoma(n, cromosoma);
         
-        cout<<"Impresion Vector"<<endl;
-        imprimirVector(indicePiezaEscogida);
-//        cout<<"Impresion Cromosoma"<<endl;
-//        cromosoma.imprimir();
+//        cout<<"Impresion Vector"<<endl;
+//        imprimirVector(indicePiezaEscogida);
     }
     
     return poblacion;
@@ -484,7 +475,7 @@ void mutar(Cromosoma& cromosoma, double probMutacion) {
             }
 
             // Debug print to see selected indices
-            cout << "Mutating genes at positions " << index1 << " and " << index2 << endl;
+//            cout << "Mutating genes at positions " << index1 << " and " << index2 << endl;
 
             // Perform the mutation by swapping the genes
             Pieza temp = cromosoma.getGene(index1);
@@ -520,7 +511,7 @@ void colocarPiezasEnOrden(Cromosoma& cromosoma, Stock& stock) {
             // Mover a la siguiente fila
             alturaTotal += alturaFilaActual;
             if (alturaTotal + pieza.getH() > altoMaximo) {
-                cout << "La pieza ID: " << pieza.getID() << " no cabe en el stock restante. Colocación terminada." << endl;
+//                cout << "La pieza ID: " << pieza.getID() << " no cabe en el stock restante. Colocación terminada." << endl;
                 break;
             }
 
@@ -534,7 +525,7 @@ void colocarPiezasEnOrden(Cromosoma& cromosoma, Stock& stock) {
         }
     }
 
-    cout << "Colocación finalizada." << endl;
+//    cout << "Colocación finalizada." << endl;
 }
 
 bool verificarCromosoma(const Cromosoma& cromosoma, const Stock& stock) {
@@ -570,7 +561,7 @@ bool verificarCromosoma(const Cromosoma& cromosoma, const Stock& stock) {
 }
 
 void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tamanoPoblacion,
-        int generaciones, double probMutacion, double probCruce) {
+        int generaciones, double probMutacion, double probCruce, int numElites) {
     
     int validoH1, validoH2;
     Poblacion poblacion;
@@ -584,15 +575,18 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
         validoH1 = verificarCromosoma(cromosoma,listaStocks[0]);
         for (int i = 0; i < cromosoma.getGenes().size(); ++i) {
             if(cromosoma.getGene(i).getID() == -1) break;
-            cout << cromosoma.getGene(i).getID() << " ";
+//            cout << cromosoma.getGene(i).getID() << " ";
         }
-        cout<< "Fitness: "<< cromosoma.getFitness()<<endl;
+//        cout<< "Fitness: "<< cromosoma.getFitness()<<endl;
     }
     //poblacion.imprimir();
      
     for (int generacion = 0; generacion < generaciones; ++generacion) {
         Poblacion nuevaPoblacion;
-        int numElites = 2;
+        
+//        for(int i=0;i<=80;i++)cout<<"=";
+//        cout<<endl;
+//        cout<<"Iteración " << generacion << endl;
 
         // Seleccionar élites
         vector<Cromosoma> elites = seleccionarElitista(poblacion, numElites);
@@ -601,15 +595,15 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
         }
         
         // Imprimir los cromosomas y su fitness
-        cout << "Elites seleccionadas:" << endl;
-        for (int i = 0; i < elites.size(); ++i) {
-            cout << "Cromosoma " << i + 1 << ": Fitness = " << elites[i].getFitness() << ", Genes: ";
-            for (const Pieza& pieza : elites[i].getGenes()) {
-                if(pieza.getID() == -1 ) break;
-                cout << pieza.getID() << " ";
-            }
-            cout << endl;
-        }
+//        cout << "Elites seleccionadas:" << endl;
+//        for (int i = 0; i < elites.size(); ++i) {
+//            cout << "Cromosoma " << i + 1 << ": Fitness = " << elites[i].getFitness() << ", Genes: ";
+//            for (const Pieza& pieza : elites[i].getGenes()) {
+//                if(pieza.getID() == -1 ) break;
+//                cout << pieza.getID() << " ";
+//            }
+//            cout << endl;
+//        }
 
         while (nuevaPoblacion.getCromosomas().size() < poblacion.getCromosomas().size()) {
             
@@ -619,17 +613,17 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
                 padre2 = seleccionarRuleta(poblacion);
             } while (padre1 == padre2);
             
-            cout << "Genes del hijo1 antes del cruce: ";
-            for (int i = 0; i < hijo1.getGenes().size(); ++i) {
-                if( hijo1.getGene(i).getID() == -1) break;
-                cout << hijo1.getGene(i).getID() << " ";
-            }
-            cout << endl;
-            cout << "Genes del hijo2 antes del cruce: ";
-            for (int i = 0; i < hijo2.getGenes().size(); ++i) {
-                if( hijo2.getGene(i).getID() == -1) break;
-                cout << hijo2.getGene(i).getID() << " ";
-            }
+//            cout << "Genes del hijo1 antes del cruce: ";
+//            for (int i = 0; i < hijo1.getGenes().size(); ++i) {
+//                if( hijo1.getGene(i).getID() == -1) break;
+//                cout << hijo1.getGene(i).getID() << " ";
+//            }
+//            cout << endl;
+//            cout << "Genes del hijo2 antes del cruce: ";
+//            for (int i = 0; i < hijo2.getGenes().size(); ++i) {
+//                if( hijo2.getGene(i).getID() == -1) break;
+//                cout << hijo2.getGene(i).getID() << " ";
+//            }
             do {
                 pair<Cromosoma, Cromosoma> hijos = cruzar(padre1, padre2, probCruce);
                 hijo1 = hijos.first;
@@ -642,17 +636,17 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
             calcularDesperdicio(hijo1, listaStocks[0]);
             calcularDesperdicio(hijo2, listaStocks[0]);
             
-            cout << "Genes del hijo1 después del cruce: ";
-            for (int i = 0; i < hijo1.getGenes().size(); ++i) {
-                if( hijo1.getGene(i).getID() == -1) break;
-                cout << hijo1.getGene(i).getID() << " ";
-            }
-            cout << endl;
-            cout << "Genes del hijo2 después del cruce: ";
-            for (int i = 0; i < hijo2.getGenes().size(); ++i) {
-                if( hijo2.getGene(i).getID() == -1) break;
-                cout << hijo2.getGene(i).getID() << " ";
-            }
+//            cout << "Genes del hijo1 después del cruce: ";
+//            for (int i = 0; i < hijo1.getGenes().size(); ++i) {
+//                if( hijo1.getGene(i).getID() == -1) break;
+//                cout << hijo1.getGene(i).getID() << " ";
+//            }
+//            cout << endl;
+//            cout << "Genes del hijo2 después del cruce: ";
+//            for (int i = 0; i < hijo2.getGenes().size(); ++i) {
+//                if( hijo2.getGene(i).getID() == -1) break;
+//                cout << hijo2.getGene(i).getID() << " ";
+//            }
             
             hijo1Original = hijo1;
             hijo2Original = hijo2;
@@ -668,19 +662,19 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
                 validoH2 = verificarCromosoma(hijo2,listaStocks[0]);
                 
             }while(validoH1==0 | validoH2==0);
-            cout << "Genes del hijo1 después de la mutación: ";
-            for (int i = 0; i < hijo1.getGenes().size(); ++i) {
-                if( hijo1.getGene(i).getID() == -1) break;
-                cout << hijo1.getGene(i).getID() << " ";
-            }
-            cout << endl;
-            cout << "Genes del hijo2 después de la mutación: ";
-            for (int i = 0; i < hijo2.getGenes().size(); ++i) {
-                if( hijo2.getGene(i).getID() == -1) break;
-                cout << hijo2.getGene(i).getID() << " ";
-            }
-            cout << endl;
-            cout << "Mutación valido " << endl;
+//            cout << "Genes del hijo1 después de la mutación: ";
+//            for (int i = 0; i < hijo1.getGenes().size(); ++i) {
+//                if( hijo1.getGene(i).getID() == -1) break;
+//                cout << hijo1.getGene(i).getID() << " ";
+//            }
+//            cout << endl;
+//            cout << "Genes del hijo2 después de la mutación: ";
+//            for (int i = 0; i < hijo2.getGenes().size(); ++i) {
+//                if( hijo2.getGene(i).getID() == -1) break;
+//                cout << hijo2.getGene(i).getID() << " ";
+//            }
+//            cout << endl;
+//            cout << "Mutación valido " << endl;
             
             calcularDesperdicio(hijo1, listaStocks[0]);
             calcularDesperdicio(hijo2, listaStocks[0]);
@@ -688,22 +682,31 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
             nuevaPoblacion.addCromosoma(hijo1);
             nuevaPoblacion.addCromosoma(hijo2);
             
+            poblacion = nuevaPoblacion;
+            
+            cout << "La mejor solución de la población actual es:" << endl;
+            Cromosoma mejorCromosoma = poblacion.getBestCromosoma();
+            cout << "Fitness : "<<mejorCromosoma.getFitness()<<endl;
+            for (int i = 0; i < mejorCromosoma.getGenes().size(); ++i) {
+                if( mejorCromosoma.getGene(i).getID() == -1) break;
+                cout << mejorCromosoma.getGene(i).getID() << " ";
+            }
         }
     }
-    cout << "La mejor solución de la población actual es:" << endl;
-    Cromosoma mejorCromosoma = poblacion.getBestCromosoma();
-    mejorCromosoma.imprimir();
-    cout << endl; 
-    colocarPiezasEnOrden(mejorCromosoma, listaStocks[0]);
+//    cout << "La mejor solución de la población actual es:" << endl;
+//    Cromosoma mejorCromosoma = poblacion.getBestCromosoma();
+//    mejorCromosoma.imprimir();
+//    cout << endl; 
+//    colocarPiezasEnOrden(mejorCromosoma, listaStocks[0]);
 }
 
 int main(int argc, char** argv) {
     srand(static_cast<unsigned>(time(0)));
     int i=0; 
-    int tamanoPoblacion = 100; 
-    int generaciones = 100;
-    double probMutacion = 0.1, probCruce = 0.1;
-    
+    int tamanoPoblacion = 500; 
+    int generaciones = 500;
+    int numElites=50;
+    double probMutacion = 0.1, probCruce = 0.9;
     
     vector<int> resultado;
     vector<Pieza> listaPiezas = generarListaPiezas(numPiezas);
@@ -715,9 +718,10 @@ int main(int argc, char** argv) {
     }
     cout << "\nLista de Stock:\n";
     listaStocks[0].imprimirStock();
-   cout << endl;
+    cout << endl;
     
-    algoritmoGA(listaPiezas,listaStocks,tamanoPoblacion,generaciones,probMutacion,probCruce);
+    algoritmoGA(listaPiezas,listaStocks,tamanoPoblacion,generaciones,
+            probMutacion,probCruce, numElites);
     cout << "Ejecución del algoritmo GA finalizada." << endl;
    
     return 0;
