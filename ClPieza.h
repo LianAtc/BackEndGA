@@ -43,7 +43,10 @@ public:
     void setH(float nuevoH) { h = nuevoH; }
     void setX(int nuevoX) { x = nuevoX; }
     void setY(int nuevoY) { y = nuevoY; }
-    void rotarPieza() { swap(w, h); }
+    void rotarPieza() { 
+        swap(w, h); 
+        r = !r; 
+    }
     bool operator==(const Pieza& otra) const {
         return (this->w == otra.w && this->h == otra.h && this->id == otra.id);
     }

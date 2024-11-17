@@ -56,6 +56,7 @@ public:
     
     void imprimir() const {
         for (const Pieza& pieza : genes) {
+            if(pieza.getID() == -1) break;
             pieza.imprimirPieza();
         }
         std::cout << " | Fitness: " << fitness << std::endl;
