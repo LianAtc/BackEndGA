@@ -665,7 +665,7 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
         for (Cromosoma& cromosoma : nuevaPoblacion.getCromosomas()) {
             do {
                 Cromosoma cromosomaOriginal = cromosoma;
-                mutar(cromosoma, probMutacion, listaStocks[0]);
+                mutar(cromosoma, probMutacion);
                 if (!verificarCromosoma(cromosoma, listaStocks[0])) {
                     cromosoma = cromosomaOriginal;
                 }
