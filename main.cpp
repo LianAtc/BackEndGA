@@ -529,7 +529,7 @@ void colocarPiezasEnOrden(Cromosoma& cromosoma, Stock& stock) {
 //    cout << "Colocación finalizada." << endl;
 }
 
-bool verificarCromosoma(const Cromosoma& cromosoma, const Stock& stock) {
+bool verificarCromosoma(Cromosoma& cromosoma, const Stock& stock) {
     float anchoMaximo = stock.getW();
     float altoMaximo = stock.getH();
     float anchoFilaActual = 0;
@@ -539,22 +539,33 @@ bool verificarCromosoma(const Cromosoma& cromosoma, const Stock& stock) {
     for (const Pieza& pieza : cromosoma.getGenes()) {
         if (pieza.getID() == -1) break; // Ignorar posiciones vacías
 
-        // Verificar si la pieza cabe en la fila actual
+        // Verificar si la pieza cabe en la fila actual antes de actualizar el ancho
         if (anchoFilaActual + pieza.getW() <= anchoMaximo) {
             // Colocar la pieza en la fila actual
             anchoFilaActual += pieza.getW();
             alturaFilaActual = max(alturaFilaActual, pieza.getH());
         } else {
-            // Mover a la siguiente fila
+            // Mover a la siguiente fila y verificar si la nueva fila cabe en el alto total
             alturaTotal += alturaFilaActual;
             if (alturaTotal + pieza.getH() > altoMaximo) {
-                return false;
-            } else {
-                // Colocar la pieza en la nueva fila
-                anchoFilaActual = pieza.getW();
-                alturaFilaActual = pieza.getH();
+                return false; // No cabe en el stock
             }
+            
+            // Reiniciar los valores para la nueva fila
+            anchoFilaActual = pieza.getW();
+            alturaFilaActual = pieza.getH();
         }
+    }
+
+    // Verificar la altura total al final
+    alturaTotal += alturaFilaActual;
+    if (alturaTotal > altoMaximo) {
+        return false; // No cabe en el stock
+    }
+
+    calcularDesperdicio(cromosoma, stock);
+    if (cromosoma.getFitness() < 0.0) {
+        cout << "Desperdicio en la función: " << cromosoma.getFitness() << endl;
     }
 
     // Si todas las piezas encajan, la solución es válida
@@ -564,7 +575,7 @@ bool verificarCromosoma(const Cromosoma& cromosoma, const Stock& stock) {
 void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tamanoPoblacion,
         int generaciones, double probMutacion, double probCruce, int numElites) {
     
-    int validoH1, validoH2;
+    bool validoH1, validoH2;
     Poblacion poblacion;
     poblacion = generarPoblacionInicial(listaPiezas,listaStocks,tamanoPoblacion);
     Cromosoma hijo1, hijo2,hijo1Original,hijo2Original ;
@@ -574,10 +585,7 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
     for (Cromosoma& cromosoma : poblacion.getCromosomas()) {
         calcularDesperdicio(cromosoma, listaStocks[0]);
         validoH1 = verificarCromosoma(cromosoma,listaStocks[0]);
-        for (int i = 0; i < cromosoma.getGenes().size(); ++i) {
-            if(cromosoma.getGene(i).getID() == -1) break;
-//            cout << cromosoma.getGene(i).getID() << " ";
-        }
+        if(cromosoma.getFitness() < 0.0) cout << "Fitness negativo población: " << cromosoma.getFitness() << endl;
 //        cout<< "Fitness: "<< cromosoma.getFitness()<<endl;
     }
     //poblacion.imprimir();
@@ -614,17 +622,20 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
                 padre2 = seleccionarRuleta(poblacion);
             } while (padre1 == padre2);
             
-//            cout << "Genes del hijo1 antes del cruce: ";
-//            for (int i = 0; i < hijo1.getGenes().size(); ++i) {
-//                if( hijo1.getGene(i).getID() == -1) break;
-//                cout << hijo1.getGene(i).getID() << " ";
-//            }
-//            cout << endl;
-//            cout << "Genes del hijo2 antes del cruce: ";
-//            for (int i = 0; i < hijo2.getGenes().size(); ++i) {
-//                if( hijo2.getGene(i).getID() == -1) break;
-//                cout << hijo2.getGene(i).getID() << " ";
-//            }
+            if(padre1.getFitness() < 0.0) cout << "Fitness negativo padre1: " << padre1.getFitness() << endl;
+            if(padre2.getFitness() < 0.0) cout << "Fitness negativo padre2: " << padre2.getFitness() << endl;
+            
+            cout << "Genes del hijo1 antes del cruce: ";
+            for (int i = 0; i < hijo1.getGenes().size(); ++i) {
+                if( hijo1.getGene(i).getID() == -1) break;
+                cout << hijo1.getGene(i).getID() << " ";
+            }
+            cout << endl;
+            cout << "Genes del hijo2 antes del cruce: ";
+            for (int i = 0; i < hijo2.getGenes().size(); ++i) {
+                if( hijo2.getGene(i).getID() == -1) break;
+                cout << hijo2.getGene(i).getID() << " ";
+            }
             do {
                 pair<Cromosoma, Cromosoma> hijos = cruzar(padre1, padre2, probCruce);
                 hijo1 = hijos.first;
@@ -632,34 +643,33 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
                 validoH1 = verificarCromosoma(hijo1,listaStocks[0]);
                 validoH2 = verificarCromosoma(hijo2,listaStocks[0]);
                 
-            } while (validoH1 ==0 | validoH2==0);
+            } while (!(validoH1 && validoH2));
             
-//            cout << "Genes del hijo1 después del cruce: ";
-//            for (int i = 0; i < hijo1.getGenes().size(); ++i) {
-//                if( hijo1.getGene(i).getID() == -1) break;
-//                cout << hijo1.getGene(i).getID() << " ";
-//            }
-//            cout << endl;
-//            cout << "Genes del hijo2 después del cruce: ";
-//            for (int i = 0; i < hijo2.getGenes().size(); ++i) {
-//                if( hijo2.getGene(i).getID() == -1) break;
-//                cout << hijo2.getGene(i).getID() << " ";
-//            }
+            cout << "Genes del hijo1 después del cruce: ";
+            for (int i = 0; i < hijo1.getGenes().size(); ++i) {
+                if( hijo1.getGene(i).getID() == -1) break;
+                cout << hijo1.getGene(i).getID() << " ";
+            }
+            cout << endl;
+            cout << "Genes del hijo2 después del cruce: ";
+            for (int i = 0; i < hijo2.getGenes().size(); ++i) {
+                if( hijo2.getGene(i).getID() == -1) break;
+                cout << hijo2.getGene(i).getID() << " ";
+            }
             calcularDesperdicio(hijo1, listaStocks[0]);
             calcularDesperdicio(hijo2, listaStocks[0]);
+            
+            if(hijo1.getFitness() < 0.0 || hijo2.getFitness() < 0.0){
+                cout << "Fitness negativo hijo1: " << hijo1.getFitness() << endl;
+                cout << "Fitness negativo hijo2: " << hijo2.getFitness() << endl;
+                cout << "Valido: " << validoH1 << validoH2 << endl;
+            }
             
             nuevaPoblacion.addCromosoma(hijo1);
             nuevaPoblacion.addCromosoma(hijo2);
             
             poblacion = nuevaPoblacion;
             
-//            cout << "La mejor solución de la población actual es:" << endl;
-//            Cromosoma mejorCromosoma = poblacion.getBestCromosoma();
-//            cout << "Fitness : "<<mejorCromosoma.getFitness()<<endl;
-//            for (int i = 0; i < mejorCromosoma.getGenes().size(); ++i) {
-//                if( mejorCromosoma.getGene(i).getID() == -1) break;
-//                cout << mejorCromosoma.getGene(i).getID() << " ";
-//            }
         }
         
         for (Cromosoma& cromosoma : nuevaPoblacion.getCromosomas()) {
@@ -669,9 +679,20 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
                 if (!verificarCromosoma(cromosoma, listaStocks[0])) {
                     cromosoma = cromosomaOriginal;
                 }
-            } while (!verificarCromosoma(cromosoma, listaStocks[0])); 
+                validoH1 = verificarCromosoma(cromosoma,listaStocks[0]);
+            } while (!validoH1);
+            calcularDesperdicio(cromosoma, listaStocks[0]);
+            if(cromosoma.getFitness() < 0.0) cout << "Fitness negativo mutacion: " << cromosoma.getFitness() << endl;
         }
         poblacion = nuevaPoblacion;
+        
+//        cout << "La mejor solución de la población actual es:" << endl;
+//        Cromosoma mejorCromosoma = poblacion.getBestCromosoma();
+//        cout << "Fitness : "<<mejorCromosoma.getFitness()<<endl;
+//        for (int i = 0; i < mejorCromosoma.getGenes().size(); ++i) {
+//            if( mejorCromosoma.getGene(i).getID() == -1) break;
+//            cout << mejorCromosoma.getGene(i).getID() << " ";
+//        }
     }
     cout << "La mejor solución de la población actual es:" << endl;
     Cromosoma mejorCromosoma = poblacion.getBestCromosoma();
@@ -683,8 +704,8 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
 int main(int argc, char** argv) {
     srand(static_cast<unsigned>(time(0)));
     int i=0; 
-    int tamanoPoblacion = 500; 
-    int generaciones = 500;
+    int tamanoPoblacion = 200; 
+    int generaciones = 200;
     int numElites=50;
     double probMutacion = 0.1, probCruce = 0.9;
     
