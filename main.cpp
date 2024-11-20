@@ -668,8 +668,6 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
             nuevaPoblacion.addCromosoma(hijo1);
             nuevaPoblacion.addCromosoma(hijo2);
             
-            poblacion = nuevaPoblacion;
-            
         }
         
         for (Cromosoma& cromosoma : nuevaPoblacion.getCromosomas()) {
