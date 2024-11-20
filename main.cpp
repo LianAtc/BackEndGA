@@ -30,7 +30,7 @@
 
 using namespace std;
 
-int numPiezas = 500;
+int numPiezas = 250;
 float anchoMayor,altoMayor;
 float desTotal;
 
@@ -634,9 +634,6 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
                 
             } while (validoH1 ==0 | validoH2==0);
             
-            calcularDesperdicio(hijo1, listaStocks[0]);
-            calcularDesperdicio(hijo2, listaStocks[0]);
-            
 //            cout << "Genes del hijo1 después del cruce: ";
 //            for (int i = 0; i < hijo1.getGenes().size(); ++i) {
 //                if( hijo1.getGene(i).getID() == -1) break;
@@ -648,35 +645,6 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
 //                if( hijo2.getGene(i).getID() == -1) break;
 //                cout << hijo2.getGene(i).getID() << " ";
 //            }
-            
-            hijo1Original = hijo1;
-            hijo2Original = hijo2;
-            
-            do{
-                hijo1 = hijo1Original;
-                hijo2 = hijo2Original;
-                
-                mutar(hijo1, probMutacion);
-                mutar(hijo2, probMutacion);
-
-                validoH1 = verificarCromosoma(hijo1,listaStocks[0]);
-                validoH2 = verificarCromosoma(hijo2,listaStocks[0]);
-                
-            }while(validoH1==0 | validoH2==0);
-//            cout << "Genes del hijo1 después de la mutación: ";
-//            for (int i = 0; i < hijo1.getGenes().size(); ++i) {
-//                if( hijo1.getGene(i).getID() == -1) break;
-//                cout << hijo1.getGene(i).getID() << " ";
-//            }
-//            cout << endl;
-//            cout << "Genes del hijo2 después de la mutación: ";
-//            for (int i = 0; i < hijo2.getGenes().size(); ++i) {
-//                if( hijo2.getGene(i).getID() == -1) break;
-//                cout << hijo2.getGene(i).getID() << " ";
-//            }
-//            cout << endl;
-//            cout << "Mutación valido " << endl;
-            
             calcularDesperdicio(hijo1, listaStocks[0]);
             calcularDesperdicio(hijo2, listaStocks[0]);
             
@@ -693,6 +661,17 @@ void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tama
 //                cout << mejorCromosoma.getGene(i).getID() << " ";
 //            }
         }
+        
+        for (Cromosoma& cromosoma : nuevaPoblacion.getCromosomas()) {
+            do {
+                Cromosoma cromosomaOriginal = cromosoma;
+                mutar(cromosoma, probMutacion, listaStocks[0]);
+                if (!verificarCromosoma(cromosoma, listaStocks[0])) {
+                    cromosoma = cromosomaOriginal;
+                }
+            } while (!verificarCromosoma(cromosoma, listaStocks[0])); 
+        }
+        poblacion = nuevaPoblacion;
     }
     cout << "La mejor solución de la población actual es:" << endl;
     Cromosoma mejorCromosoma = poblacion.getBestCromosoma();
