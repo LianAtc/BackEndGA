@@ -30,13 +30,43 @@
 
 using namespace std;
 
-int numPiezas = 250;
+int numPiezas = 90;
 float anchoMayor,altoMayor;
 float desTotal;
 
 vector<Pieza> generarListaPiezas(int cantidad) {
     vector<Pieza> listaPiezas;
     vector<pair<float, float>> medidasDisponibles = {
+        {45, 8.6}, {15, 7.5}, 
+        {40, 25.0}, {40, 8.0},
+        {40, 20.0}, {30, 15.0},
+        {20, 10.0}, {40, 10.0},
+        {30, 7.5}, {25, 12.0},
+        {50, 9.5}, {35, 8.0},
+        {60, 10.0}, {45, 12.5},
+        {25, 5.0}, {55, 15.0},
+        {65, 20.0}, {20, 7.0},
+        {30, 5.5}, {40, 6.5},
+        {50, 12.0}, {35, 10.0},
+        {25, 8.0}, {45, 10.5},
+        {55, 11.5}, {30, 20.0},
+        {60, 15.0}, {35, 7.5},
+        {20, 5.0}, {25, 10.0},
+        {45, 8.6}, {15, 7.5}, 
+        {40, 25.0}, {40, 8.0},
+        {40, 20.0}, {30, 15.0},
+        {20, 10.0}, {40, 10.0},
+        {30, 7.5}, {25, 12.0},
+        {50, 9.5}, {35, 8.0},
+        {60, 10.0}, {45, 12.5},
+        {25, 5.0}, {55, 15.0},
+        {65, 20.0}, {20, 7.0},
+        {30, 5.5}, {40, 6.5},
+        {50, 12.0}, {35, 10.0},
+        {25, 8.0}, {45, 10.5},
+        {55, 11.5}, {30, 20.0},
+        {60, 15.0}, {35, 7.5},
+        {20, 5.0}, {25, 10.0},
         {45, 8.6}, {15, 7.5}, 
         {40, 25.0}, {40, 8.0},
         {40, 20.0}, {30, 15.0},
@@ -60,8 +90,8 @@ vector<Pieza> generarListaPiezas(int cantidad) {
         bool rotada = 0;
 
         int indiceAleatorio = rand() % medidasDisponibles.size();
-        float w = medidasDisponibles[indiceAleatorio].first;
-        float h = medidasDisponibles[indiceAleatorio].second;
+        float w = medidasDisponibles[i].first;
+        float h = medidasDisponibles[i].second;
         
         Pieza p(i, x, y, w, h, rotada);
         listaPiezas.push_back(p);
@@ -81,8 +111,8 @@ vector<Stock> generarListaStocks(int cantidad) {
             w = 60;
             h = 60;
         } else {
-            w = 45;
-            h = 45;
+            w = 60;
+            h = 60;
         }
         
         Stock s(w, h); 
@@ -120,7 +150,7 @@ void calcularDesperdicio(Cromosoma& cromosoma, const Stock& stock) {
     if (desperdicio < 0) {
         desperdicio = 0;
     }
-    double fitness = 100 * (1.0 - desperdicio);
+    double fitness = (1.0 - desperdicio);
     cromosoma.setFitness(fitness); 
 }
 
@@ -572,140 +602,97 @@ bool verificarCromosoma(Cromosoma& cromosoma, const Stock& stock) {
     return true;
 }
 
-void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks,int tamanoPoblacion,
-        int generaciones, double probMutacion, double probCruce, int numElites) {
-    
-    bool validoH1, validoH2;
-    Poblacion poblacion;
-    poblacion = generarPoblacionInicial(listaPiezas,listaStocks,tamanoPoblacion);
-    Cromosoma hijo1, hijo2,hijo1Original,hijo2Original ;
-    //poblacion.imprimir();
-    
-    // Calculamos el fitnees de cada solución para elegir las mejores
+void algoritmoGA(vector<Pieza>& listaPiezas, vector<Stock>& listaStocks, int tamanoPoblacion,
+                 int generaciones, double probMutacion, double probCruce, int numElites) {
+    // Variables para rastrear el mejor cromosoma global
+    Cromosoma mejorCromosomaGlobal;
+    double mejorFitnessGlobal = std::numeric_limits<double>::max();
+
+    // Generar la población inicial
+    Poblacion poblacion = generarPoblacionInicial(listaPiezas, listaStocks, tamanoPoblacion);
+
+    // Evaluar el fitness inicial y determinar el mejor cromosoma
     for (Cromosoma& cromosoma : poblacion.getCromosomas()) {
         calcularDesperdicio(cromosoma, listaStocks[0]);
-        validoH1 = verificarCromosoma(cromosoma,listaStocks[0]);
-        if(cromosoma.getFitness() < 0.0) cout << "Fitness negativo población: " << cromosoma.getFitness() << endl;
-//        cout<< "Fitness: "<< cromosoma.getFitness()<<endl;
+        if (cromosoma.getFitness() < mejorFitnessGlobal) {
+            mejorFitnessGlobal = cromosoma.getFitness();
+            mejorCromosomaGlobal = cromosoma;
+        }
     }
-    //poblacion.imprimir();
-     
+
+    // Bucle principal de generaciones
     for (int generacion = 0; generacion < generaciones; ++generacion) {
         Poblacion nuevaPoblacion;
-        
-//        for(int i=0;i<=80;i++)cout<<"=";
-//        cout<<endl;
-//        cout<<"Iteración " << generacion << endl;
 
-        // Seleccionar élites
+        // Seleccionar élites y agregarlas a la nueva población
         vector<Cromosoma> elites = seleccionarElitista(poblacion, numElites);
         for (const Cromosoma& elite : elites) {
             nuevaPoblacion.addCromosoma(elite);
         }
-        
-        // Imprimir los cromosomas y su fitness
-//        cout << "Elites seleccionadas:" << endl;
-//        for (int i = 0; i < elites.size(); ++i) {
-//            cout << "Cromosoma " << i + 1 << ": Fitness = " << elites[i].getFitness() << ", Genes: ";
-//            for (const Pieza& pieza : elites[i].getGenes()) {
-//                if(pieza.getID() == -1 ) break;
-//                cout << pieza.getID() << " ";
-//            }
-//            cout << endl;
-//        }
 
-        while (nuevaPoblacion.getCromosomas().size() < poblacion.getCromosomas().size()) {
-            
+        // Generar nueva población mediante cruces y mutaciones
+        while (nuevaPoblacion.getCromosomas().size() < tamanoPoblacion) {
             Cromosoma padre1 = seleccionarRuleta(poblacion);
             Cromosoma padre2;
+
             do {
                 padre2 = seleccionarRuleta(poblacion);
             } while (padre1 == padre2);
-            
-            if(padre1.getFitness() < 0.0) cout << "Fitness negativo padre1: " << padre1.getFitness() << endl;
-            if(padre2.getFitness() < 0.0) cout << "Fitness negativo padre2: " << padre2.getFitness() << endl;
-            
-            cout << "Genes del hijo1 antes del cruce: ";
-            for (int i = 0; i < hijo1.getGenes().size(); ++i) {
-                if( hijo1.getGene(i).getID() == -1) break;
-                cout << hijo1.getGene(i).getID() << " ";
+
+            // Generar hijos mediante cruce
+            pair<Cromosoma, Cromosoma> hijos = cruzar(padre1, padre2, probCruce);
+            Cromosoma hijo1 = hijos.first;
+            Cromosoma hijo2 = hijos.second;
+
+            // Verificar y calcular fitness de los hijos
+            if (verificarCromosoma(hijo1, listaStocks[0])) {
+                calcularDesperdicio(hijo1, listaStocks[0]);
+                nuevaPoblacion.addCromosoma(hijo1);
             }
-            cout << endl;
-            cout << "Genes del hijo2 antes del cruce: ";
-            for (int i = 0; i < hijo2.getGenes().size(); ++i) {
-                if( hijo2.getGene(i).getID() == -1) break;
-                cout << hijo2.getGene(i).getID() << " ";
+            if (verificarCromosoma(hijo2, listaStocks[0])) {
+                calcularDesperdicio(hijo2, listaStocks[0]);
+                nuevaPoblacion.addCromosoma(hijo2);
             }
-            do {
-                pair<Cromosoma, Cromosoma> hijos = cruzar(padre1, padre2, probCruce);
-                hijo1 = hijos.first;
-                hijo2 = hijos.second;
-                validoH1 = verificarCromosoma(hijo1,listaStocks[0]);
-                validoH2 = verificarCromosoma(hijo2,listaStocks[0]);
-                
-            } while (!(validoH1 && validoH2));
-            
-            cout << "Genes del hijo1 después del cruce: ";
-            for (int i = 0; i < hijo1.getGenes().size(); ++i) {
-                if( hijo1.getGene(i).getID() == -1) break;
-                cout << hijo1.getGene(i).getID() << " ";
-            }
-            cout << endl;
-            cout << "Genes del hijo2 después del cruce: ";
-            for (int i = 0; i < hijo2.getGenes().size(); ++i) {
-                if( hijo2.getGene(i).getID() == -1) break;
-                cout << hijo2.getGene(i).getID() << " ";
-            }
-            calcularDesperdicio(hijo1, listaStocks[0]);
-            calcularDesperdicio(hijo2, listaStocks[0]);
-            
-            if(hijo1.getFitness() < 0.0 || hijo2.getFitness() < 0.0){
-                cout << "Fitness negativo hijo1: " << hijo1.getFitness() << endl;
-                cout << "Fitness negativo hijo2: " << hijo2.getFitness() << endl;
-                cout << "Valido: " << validoH1 << validoH2 << endl;
-            }
-            
-            nuevaPoblacion.addCromosoma(hijo1);
-            nuevaPoblacion.addCromosoma(hijo2);
-            
         }
-        
+
+        // Aplicar mutaciones y calcular fitness de la nueva población
         for (Cromosoma& cromosoma : nuevaPoblacion.getCromosomas()) {
-            do {
-                Cromosoma cromosomaOriginal = cromosoma;
-                mutar(cromosoma, probMutacion);
-                if (!verificarCromosoma(cromosoma, listaStocks[0])) {
-                    cromosoma = cromosomaOriginal;
-                }
-                validoH1 = verificarCromosoma(cromosoma,listaStocks[0]);
-            } while (!validoH1);
+            Cromosoma cromosomaOriginal = cromosoma;
+            mutar(cromosoma, probMutacion);
+            if (!verificarCromosoma(cromosoma, listaStocks[0])) {
+                cromosoma = cromosomaOriginal;
+            }
             calcularDesperdicio(cromosoma, listaStocks[0]);
-            if(cromosoma.getFitness() < 0.0) cout << "Fitness negativo mutacion: " << cromosoma.getFitness() << endl;
+
+            // Actualizar el mejor cromosoma global si es necesario
+            if (cromosoma.getFitness() < mejorFitnessGlobal) {
+                mejorFitnessGlobal = cromosoma.getFitness();
+                mejorCromosomaGlobal = cromosoma;
+            }
         }
+
+        // Actualizar la población con la nueva generación
         poblacion = nuevaPoblacion;
-        
-//        cout << "La mejor solución de la población actual es:" << endl;
-//        Cromosoma mejorCromosoma = poblacion.getBestCromosoma();
-//        cout << "Fitness : "<<mejorCromosoma.getFitness()<<endl;
-//        for (int i = 0; i < mejorCromosoma.getGenes().size(); ++i) {
-//            if( mejorCromosoma.getGene(i).getID() == -1) break;
-//            cout << mejorCromosoma.getGene(i).getID() << " ";
+
+        // Imprimir progreso
+//        if (generacion % 10 == 0 || generacion == generaciones - 1) {
+//            cout << "Generación " << generacion << ": Mejor fitness global = " << mejorFitnessGlobal << endl;
 //        }
     }
-    cout << "La mejor solución de la población actual es:" << endl;
-    Cromosoma mejorCromosoma = poblacion.getBestCromosoma();
-    mejorCromosoma.imprimir();
-    cout << endl; 
-    colocarPiezasEnOrden(mejorCromosoma, listaStocks[0]);
+
+    // Imprimir el mejor cromosoma global al final del algoritmo
+//    cout << "Mejor cromosoma global encontrado:" << endl;
+//    mejorCromosomaGlobal.imprimir();
+    cout << mejorFitnessGlobal << endl;
 }
 
 int main(int argc, char** argv) {
     srand(static_cast<unsigned>(time(0)));
     int i=0; 
-    int tamanoPoblacion = 200; 
-    int generaciones = 200;
+    int tamanoPoblacion = 500; 
+    int generaciones = 50;
     int numElites=50;
-    double probMutacion = 0.1, probCruce = 0.9;
+    double probMutacion = 0.7, probCruce = 0.5;
     
     vector<int> resultado;
     vector<Pieza> listaPiezas = generarListaPiezas(numPiezas);
@@ -719,8 +706,10 @@ int main(int argc, char** argv) {
     listaStocks[0].imprimirStock();
     cout << endl;
     
-    algoritmoGA(listaPiezas,listaStocks,tamanoPoblacion,generaciones,
+    for(int i=0;i<=29;i++){
+        algoritmoGA(listaPiezas,listaStocks,tamanoPoblacion,generaciones,
             probMutacion,probCruce, numElites);
+    }
     cout << "Ejecución del algoritmo GA finalizada." << endl;
    
     return 0;
